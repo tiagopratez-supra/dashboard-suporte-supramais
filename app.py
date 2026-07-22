@@ -166,9 +166,12 @@ def main():
     with col1:
         if os.path.exists("logo_supra.png"): st.image("logo_supra.png", width=110)
     with col2:
+        # Pega a hora global do servidor e diminui 3 horas (Fuso de Brasília)
+        hora_brasilia = datetime.utcnow() - timedelta(hours=3)
+        
         st.markdown(
             f"<h3 style='text-align: center; margin-bottom: 0px;'>Dashboard de Chamados — SupraMAIS</h3>"
-            f"<p style='text-align: center; font-size: 0.8em; color: gray;'>Última leitura do banco: {datetime.now().strftime('%d/%m/%Y %H:%M')}</p>", 
+            f"<p style='text-align: center; font-size: 0.8em; color: gray;'>Última leitura do banco: {hora_brasilia.strftime('%d/%m/%Y %H:%M')}</p>", 
             unsafe_allow_html=True
         )
     with col3:
