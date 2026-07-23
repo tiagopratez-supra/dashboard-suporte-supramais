@@ -22,8 +22,13 @@ def home():
 # 2. Função de Consulta ao Banco de Dados
 def buscar_dados_hoje():
     try:
-        cfg = st.secrets["database"]
-        conn_str = f"DRIVER={{ODBC Driver 17 for SQL Server}};SERVER={cfg['server']};DATABASE={cfg['database']};UID={cfg['username']};PWD={cfg['password']};"
+        # Puxa as credenciais diretamente das variáveis de ambiente do Render ou do Streamlit local
+        server = os.environ.get("DB_SERVER") or st.secrets["database"]["server"]
+        database = os.environ.get("DB_NAME") or st.secrets["database"]["database"]
+        username = os.environ.get("DB_USER") or st.secrets["database"]["username"]
+        password = os.environ.get("DB_PASS") or st.secrets["database"]["password"]
+        
+        conn_str = f"DRIVER={{ODBC Driver 17 for SQL Server}};SERVER={server};DATABASE={database};UID={username};PWD={password};"
         
         hoje_brasil = (datetime.utcnow() - timedelta(hours=3)).strftime('%d/%m/%Y')
         
