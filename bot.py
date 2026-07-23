@@ -2,25 +2,31 @@ import telebot
 import pyodbc
 import pandas as pd
 from datetime import datetime, timedelta
-import streamlit as st 
+import streamlit as st
+from flask import Flask
+import threading
+import os
 
-# 1. Credenciais Oficiais
+# 1. Configurações de Credenciais
 CHAVE_TELEGRAM = "8922477706:AAFpgSxQyz8YR_S3ZAaX0_tMlrebq9SWspk"
-MEU_ID = 739554583 # Seu ID de Gestor
+MEU_ID = 739554583
 
 bot = telebot.TeleBot(CHAVE_TELEGRAM)
+app = Flask(__name__)
 
-# 2. Função de Consulta ao Banco de Dados (A mesma lógica do painel)
+# Rota web simples para o Render manter o serviço acordado
+@app.route('/')
+def home():
+    return "🤖 Assistente SupraMAIS Telegram está online e operando!"
+
+# 2. Função de Consulta ao Banco de Dados
 def buscar_dados_hoje():
     try:
-        # Puxa as credenciais com segurança direto da pasta .streamlit
         cfg = st.secrets["database"]
         conn_str = f"DRIVER={{ODBC Driver 17 for SQL Server}};SERVER={cfg['server']};DATABASE={cfg['database']};UID={cfg['username']};PWD={cfg['password']};"
         
-        # Data de hoje formatada no padrão brasileiro (com ajuste de fuso)
         hoje_brasil = (datetime.utcnow() - timedelta(hours=3)).strftime('%d/%m/%Y')
         
-        # SQL direto na view sgrp_atendimentos_geral
         sql_query = f"""
         SELECT 
             Atendente, 
@@ -44,7 +50,6 @@ def buscar_dados_hoje():
 # 3. Comando /resumo
 @bot.message_handler(commands=['resumo', 'start'])
 def enviar_resumo(mensagem):
-    # Trava de Segurança
     if mensagem.chat.id != MEU_ID:
         bot.reply_to(mensagem, "⛔ Acesso Negado: Área restrita à gestão da Suprasoft.")
         return
@@ -61,12 +66,10 @@ def enviar_resumo(mensagem):
         bot.edit_message_text(f"📊 *Resumo do dia {data_hoje}*\n\nNenhum atendimento registrado pela equipe até o momento.", chat_id=mensagem.chat.id, message_id=msg_espera.message_id, parse_mode="Markdown")
         return
 
-    # Processamento dos Dados
     total_atendimentos = len(df)
     resumo_atendentes = df.groupby('Atendente').size().reset_index(name='Quantidade')
     resumo_atendentes = resumo_atendentes.sort_values(by='Quantidade', ascending=False)
     
-    # Montagem da Mensagem
     texto_resposta = f"📊 *Resumo da Operação - SupraMAIS*\n"
     texto_resposta += f"📅 Data: {data_hoje}\n\n"
     texto_resposta += f"📈 *TOTAL DE CHAMADOS HOJE: {total_atendimentos}*\n\n"
@@ -79,5 +82,17 @@ def enviar_resumo(mensagem):
     
     bot.edit_message_text(texto_resposta, chat_id=mensagem.chat.id, message_id=msg_espera.message_id, parse_mode="Markdown")
 
-print("Assistente do Telegram pronto e operando!")
-bot.polling()
+# Função para rodar o robô em segundo plano junto com o site
+def rodar_telegram():
+    print("Iniciando o loop do Telegram...")
+    bot.infinity_polling()
+
+if __name__ == "__main__":
+    # Inicia o Telegram em uma linha paralela (thread)
+    t = threading.Thread(target=rodar_telegram)
+    t.daemon = True
+    t.start()
+    
+    # Inicia o servidor web Flask na porta exigida pelo Render
+    porta = int(os.environ.get("PORT", 5000))
+    app.run(host="0.0.0.0", port=porta)
