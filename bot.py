@@ -41,7 +41,7 @@ def buscar_dados_hoje():
         print(f"Erro na conexão com o banco: {e}")
         return None, None
 
-# Função central que exibe o menu interativo com a explicação das opções
+# Função central que monta o menu com as explicações
 def enviar_menu_com_explicacao(chat_id, nome_usuario):
     markup = InlineKeyboardMarkup()
     markup.row_width = 1
@@ -63,12 +63,12 @@ def enviar_menu_com_explicacao(chat_id, nome_usuario):
 @bot.message_handler(commands=['resumo', 'start'])
 def comando_inicial(mensagem):
     if mensagem.chat.id != MEU_ID:
-        bot.reply_to(mensagem, "⛔ Acesso Negado: Área restrita à gestão da Suprasoft.")
+        bot.reply_to(mensagem, "⛔ Acesso Negado.")
         return
     nome_usuario = mensagem.from_user.first_name or "Gestor"
     enviar_menu_com_explicacao(mensagem.chat.id, nome_usuario)
 
-# 2. Responde a QUALQUER outra palavra (oi, ola, bom dia, etc.)
+# 2. Responde a QUALQUER texto enviado (oi, ola, bom dia, etc.)
 @bot.message_handler(func=lambda mensagem: True)
 def responder_texto_livre(mensagem):
     if mensagem.chat.id != MEU_ID:
@@ -76,7 +76,6 @@ def responder_texto_livre(mensagem):
         return
     nome_usuario = mensagem.from_user.first_name or "Gestor"
     enviar_menu_com_explicacao(mensagem.chat.id, nome_usuario)
-
 
 # Tratamento do clique nos botões interativos
 @bot.callback_query_handler(func=lambda call: True)
@@ -130,6 +129,5 @@ def callback_query(call):
             
         bot.send_message(call.message.chat.id, texto_resposta, parse_mode="Markdown")
 
-
-print("Robô inteligente pronto (ouve qualquer saudação)...")
+print("Robô inteligente pronto e rodando localmente...")
 bot.infinity_polling()
