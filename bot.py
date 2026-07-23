@@ -1,5 +1,5 @@
 import telebot
-import pyodbc
+import pymssql
 import pandas as pd
 from datetime import datetime, timedelta
 import streamlit as st
@@ -19,15 +19,13 @@ app = Flask(__name__)
 def home():
     return "🤖 Assistente SupraMAIS Telegram está online e operando!"
 
-# 2. Função de Consulta ao Banco de Dados
+# 2. Função de Consulta ao Banco de Dados (Usando pymssql)
 def buscar_dados_hoje():
     try:
         server = os.environ.get("DB_SERVER") or st.secrets["database"]["server"]
         database = os.environ.get("DB_NAME") or st.secrets["database"]["database"]
         username = os.environ.get("DB_USER") or st.secrets["database"]["username"]
         password = os.environ.get("DB_PASS") or st.secrets["database"]["password"]
-        
-        conn_str = f"DRIVER={{ODBC Driver 17 for SQL Server}};SERVER={server};DATABASE={database};UID={username};PWD={password};"
         
         hoje_brasil = (datetime.utcnow() - timedelta(hours=3)).strftime('%d/%m/%Y')
         
@@ -41,7 +39,8 @@ def buscar_dados_hoje():
             CONVERT(VARCHAR(10), Data_abertura, 103) = '{hoje_brasil}'
         """
         
-        conn = pyodbc.connect(conn_str)
+        # Conexão direta via pymssql (compatível com Linux/Render sem drivers extras)
+        conn = pymssql.connect(server=server, user=username, password=password, database=database)
         df = pd.read_sql(sql_query, conn)
         conn.close()
         
