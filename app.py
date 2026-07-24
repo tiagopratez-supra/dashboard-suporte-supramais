@@ -1,7 +1,7 @@
 # =============================================================================
-# BI Suporte SupraMAIS — Edição Avançada 2.0
+# Central de Suporte — SupraMAIS  |  Command Center
 # Stack: Streamlit + pyodbc + pandas + plotly
-# SQL: INALTERADO — lê direto da view sgrp_atendimentos_geral
+# SQL : INALTERADO — lê direto da view sgrp_atendimentos_geral
 # =============================================================================
 
 import streamlit as st
@@ -16,228 +16,332 @@ warnings.filterwarnings("ignore")
 
 # ── PAGE CONFIG ────────────────────────────────────────────────────────────────
 st.set_page_config(
-    page_title="BI Suporte · SupraMAIS",
+    page_title="Central de Suporte · SupraMAIS",
     page_icon="🎯",
     layout="wide",
-    initial_sidebar_state="expanded",
+    initial_sidebar_state="collapsed",
 )
 components.html('<script>setTimeout(()=>window.parent.location.reload(),1800000)</script>', height=0)
 
-# ── PALETA ─────────────────────────────────────────────────────────────────────
-RED    = "#CC2020"
-DARK   = "#1A1A2E"
-WHITE  = "#FFFFFF"
-BG     = "#F0F2F6"
-GREEN  = "#00B894"
-ORANGE = "#E17055"
-BLUE   = "#0984E3"
-GOLD   = "#FDCB6E"
-PURPLE = "#6C5CE7"
-TEAL   = "#00CEC9"
-GRAY1  = "#636E72"
-GRAY2  = "#B2BEC3"
-GRAY3  = "#DFE6E9"
-CORES  = [RED, DARK, ORANGE, BLUE, GOLD, GREEN, PURPLE, TEAL, "#FD79A8", "#A29BFE"]
+# ── PALETA (tema escuro) ───────────────────────────────────────────────────────
+BG      = "#0D1B2A"
+CARD    = "#112240"
+CARD2   = "#1A3258"
+BRAND   = "#CC2020"
+TEAL    = "#00CEC9"
+GREEN   = "#00B894"
+ORANGE  = "#E17055"
+GOLD    = "#FDCB6E"
+PURPLE  = "#A29BFE"
+WHITE   = "#E8F4FD"
+MUTED   = "#8BA3BF"
+BORDER  = "#1E3A5F"
+DANGER  = "#E63946"
 
-# ── CSS GLOBAL ─────────────────────────────────────────────────────────────────
+CORES = [BRAND, TEAL, ORANGE, GOLD, GREEN, PURPLE, "#FD79A8", "#74B9FF", "#55EFC4", "#A29BFE"]
+
+# ── CSS GLOBAL (dark theme) ────────────────────────────────────────────────────
 st.markdown(f"""
 <style>
-  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
-  * {{ font-family: 'Inter', sans-serif !important; }}
-  .stApp {{ background: {BG} !important; }}
-  .block-container {{ padding: 0.8rem 1.8rem 2rem !important; max-width: 100% !important; }}
-  header[data-testid="stHeader"] {{ background: transparent !important; }}
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
 
-  /* ── Sidebar escura ── */
-  section[data-testid="stSidebar"] {{
-    background: linear-gradient(180deg, {DARK} 0%, #16213E 100%) !important;
-    border-right: none !important;
-  }}
-  section[data-testid="stSidebar"] h2,
-  section[data-testid="stSidebar"] h3,
-  section[data-testid="stSidebar"] label,
-  section[data-testid="stSidebar"] p,
-  section[data-testid="stSidebar"] span {{
-    color: {WHITE} !important;
-  }}
-  section[data-testid="stSidebar"] .stDateInput input {{
-    background: rgba(255,255,255,0.12) !important;
-    border-color: rgba(255,255,255,0.2) !important;
-    color: {WHITE} !important;
-    border-radius: 8px !important;
-  }}
-  section[data-testid="stSidebar"] [data-baseweb="select"] {{
-    background: rgba(255,255,255,0.1) !important;
-  }}
-  section[data-testid="stSidebar"] [data-baseweb="select"] * {{
-    color: {WHITE} !important;
-  }}
-  section[data-testid="stSidebar"] .stButton button {{
-    background: rgba(204,32,32,0.75) !important;
-    color: {WHITE} !important;
-    border: none !important;
-    border-radius: 10px !important;
-    font-weight: 600 !important;
-  }}
-  section[data-testid="stSidebar"] .stButton button:hover {{
-    background: {RED} !important;
-  }}
-  div.row-widget.stRadio > div {{
-    flex-direction: column; gap: 3px !important; background: transparent !important;
-  }}
-  div.row-widget.stRadio > div > label {{
-    background: rgba(255,255,255,0.06) !important;
-    border-radius: 10px !important; padding: 9px 14px !important;
-    margin: 0 !important; font-size: 0.86rem !important;
-    color: rgba(255,255,255,0.8) !important; border: 1px solid rgba(255,255,255,0.08) !important;
-    transition: all 0.15s;
-  }}
-  div.row-widget.stRadio > div > label:hover {{
-    background: rgba(204,32,32,0.2) !important;
-  }}
-  div.row-widget.stRadio > div > label[data-testid="stMarkdownContainer"],
-  div.row-widget.stRadio [aria-checked="true"] > div > label {{
-    background: rgba(204,32,32,0.35) !important;
-    border-color: rgba(204,32,32,0.5) !important;
-    color: {WHITE} !important;
-  }}
+* {{ font-family: 'Inter', sans-serif !important; box-sizing: border-box; }}
 
-  /* ── KPI Cards ── */
-  .kpi-grid {{ display: grid; grid-template-columns: repeat(6, 1fr); gap: 12px; margin-bottom: 18px; }}
-  .kpi-card {{
-    background: {WHITE}; border-radius: 14px; padding: 15px 16px 13px;
-    box-shadow: 0 2px 12px rgba(0,0,0,0.07); border: 1px solid {GRAY3};
-    position: relative; overflow: hidden; min-height: 105px;
-  }}
-  .kpi-top-bar {{
-    position: absolute; top: 0; left: 0; right: 0; height: 3px; border-radius: 14px 14px 0 0;
-  }}
-  .kpi-icon {{ position: absolute; right: 13px; top: 13px; font-size: 1.6rem; opacity: 0.1; }}
-  .kpi-label {{ font-size: 0.67rem; font-weight: 700; letter-spacing: 0.6px; text-transform: uppercase; color: {GRAY1}; margin-bottom: 6px; }}
-  .kpi-val {{ font-size: 1.9rem; font-weight: 800; color: {DARK}; line-height: 1; }}
-  .kpi-sub {{ font-size: 0.68rem; color: {GRAY2}; margin-top: 5px; }}
-  .kpi-badge {{
-    display: inline-block; padding: 2px 7px; border-radius: 20px;
-    font-size: 0.64rem; font-weight: 700; margin-top: 4px;
-  }}
-  .b-green {{ background: #D4F1EB; color: #00875A; }}
-  .b-red   {{ background: #FDECEA; color: #C0392B; }}
-  .b-gray  {{ background: {GRAY3}; color: {GRAY1}; }}
-  .b-blue  {{ background: #E8F4FD; color: #0984E3; }}
-  .b-gold  {{ background: #FEF9E7; color: #C8960C; }}
+/* ── Fundo principal ── */
+.stApp {{ background: {BG} !important; color: {WHITE} !important; }}
+.block-container {{ padding: 0.6rem 1.6rem 2rem !important; max-width: 100% !important; }}
+header[data-testid="stHeader"] {{ background: transparent !important; }}
 
-  /* ── Chart Wrapper ── */
-  .chart-card {{
-    background: {WHITE}; border-radius: 14px; padding: 16px 16px 8px;
-    border: 1px solid {GRAY3}; box-shadow: 0 2px 10px rgba(0,0,0,0.05); margin-bottom: 14px;
-  }}
-  .chart-card-title {{
-    font-size: 0.72rem; font-weight: 700; color: {GRAY1};
-    text-transform: uppercase; letter-spacing: 0.5px;
-    border-bottom: 1px solid {GRAY3}; padding-bottom: 8px; margin-bottom: 10px;
-  }}
+/* ── Sidebar colapsada ── */
+section[data-testid="stSidebar"] {{
+  background: {CARD} !important;
+  border-right: 1px solid {BORDER} !important;
+}}
 
-  /* ── Section title ── */
-  .sec-title {{
-    font-size: 0.72rem; font-weight: 700; color: {GRAY1};
-    text-transform: uppercase; letter-spacing: 0.8px;
-    border-left: 3px solid {RED}; padding-left: 9px;
-    margin: 18px 0 12px; display: block;
-  }}
+/* ── Textos globais ── */
+h1,h2,h3,h4,h5,h6,p,label,span,div {{ color: {WHITE} !important; }}
+.stMarkdown p {{ color: {MUTED} !important; }}
 
-  /* ── Tabs ── */
-  .stTabs [data-baseweb="tab-list"] {{
-    background: {GRAY3} !important; border-radius: 10px !important;
-    padding: 3px !important; gap: 0 !important; border: none !important;
-  }}
-  .stTabs [data-baseweb="tab"] {{
-    background: transparent !important; border: none !important;
-    border-radius: 8px !important; color: {GRAY1} !important;
-    font-weight: 500 !important; font-size: 0.82rem !important;
-    padding: 5px 18px !important;
-  }}
-  .stTabs [aria-selected="true"] {{
-    background: {WHITE} !important; color: {RED} !important;
-    font-weight: 700 !important; box-shadow: 0 1px 4px rgba(0,0,0,0.1) !important;
-  }}
+/* ── Inputs ── */
+input, textarea, select {{
+  background: {CARD2} !important;
+  color: {WHITE} !important;
+  border: 1px solid {BORDER} !important;
+  border-radius: 8px !important;
+}}
+.stDateInput input {{ color: {WHITE} !important; }}
+[data-baseweb="select"] {{ background: {CARD2} !important; border: 1px solid {BORDER} !important; }}
+[data-baseweb="select"] * {{ color: {WHITE} !important; }}
+[data-baseweb="popover"] {{ background: {CARD2} !important; border: 1px solid {BORDER} !important; }}
+[data-baseweb="menu"] {{ background: {CARD2} !important; }}
+[data-baseweb="option"] {{ background: {CARD2} !important; color: {WHITE} !important; }}
+[data-baseweb="option"]:hover {{ background: {CARD} !important; }}
+[data-baseweb="tag"] {{ background: {BRAND} !important; }}
 
-  /* ── Quadrant scatter ── */
-  .quad-label {{
-    font-size: 0.68rem; font-weight: 700; padding: 4px 9px;
-    border-radius: 6px; position: absolute;
-  }}
+/* ── Botão ── */
+.stButton button {{
+  background: {BRAND} !important; color: {WHITE} !important;
+  border: none !important; border-radius: 8px !important;
+  font-weight: 600 !important; padding: 6px 16px !important;
+  transition: opacity 0.2s !important;
+}}
+.stButton button:hover {{ opacity: 0.85 !important; }}
 
-  /* ── Ranking ── */
-  .rank-row {{
-    display: flex; align-items: center; gap: 10px;
-    padding: 7px 0; border-bottom: 1px solid {GRAY3};
-  }}
-  .rank-pos {{ font-size: 0.75rem; font-weight: 700; color: {GRAY2}; width: 22px; text-align: center; }}
-  .rank-name {{ font-size: 0.82rem; color: {DARK}; flex: 1; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }}
-  .rank-bar-bg {{ flex: 2; height: 5px; background: {GRAY3}; border-radius: 4px; overflow: hidden; }}
-  .rank-bar-fill {{ height: 5px; border-radius: 4px; }}
-  .rank-val {{ font-size: 0.82rem; font-weight: 700; min-width: 35px; text-align: right; }}
-  .medal {{ font-size: 1rem; }}
+/* ── Tabs ── */
+.stTabs [data-baseweb="tab-list"] {{
+  background: {CARD} !important;
+  border-bottom: 1px solid {BORDER} !important;
+  padding: 0 4px !important; gap: 0 !important;
+}}
+.stTabs [data-baseweb="tab"] {{
+  background: transparent !important; border: none !important;
+  color: {MUTED} !important; font-weight: 500 !important;
+  font-size: 0.84rem !important; padding: 10px 20px !important;
+  border-bottom: 3px solid transparent !important;
+}}
+.stTabs [aria-selected="true"] {{
+  color: {TEAL} !important; font-weight: 700 !important;
+  border-bottom: 3px solid {TEAL} !important;
+  background: transparent !important;
+}}
+.stTabs [data-baseweb="tab"]:hover {{
+  color: {WHITE} !important;
+}}
 
-  /* ── Pulse animation ── */
-  @keyframes pulse {{
-    0%   {{ box-shadow: 0 0 0 0 rgba(0,184,148,.6); }}
-    70%  {{ box-shadow: 0 0 0 7px rgba(0,184,148,0); }}
-    100% {{ box-shadow: 0 0 0 0 rgba(0,184,148,0); }}
-  }}
-  .dot-live {{
-    display: inline-block; width: 7px; height: 7px;
-    background: {GREEN}; border-radius: 50%;
-    animation: pulse 2s infinite; margin-right: 5px; vertical-align: middle;
-  }}
+/* ── Selectbox label ── */
+.stMultiSelect label, .stSelectbox label, .stDateInput label {{
+  color: {MUTED} !important; font-size: 0.76rem !important; font-weight: 600 !important;
+  text-transform: uppercase; letter-spacing: 0.4px;
+}}
 
-  ::-webkit-scrollbar {{ width: 5px; height: 5px; }}
-  ::-webkit-scrollbar-thumb {{ background: {GRAY2}; border-radius: 4px; }}
-  ::-webkit-scrollbar-track {{ background: transparent; }}
+/* ── KPI cards ── */
+.kpi-card {{
+  background: {CARD};
+  border: 1px solid {BORDER};
+  border-radius: 14px;
+  padding: 16px 18px 14px;
+  position: relative; overflow: hidden;
+  min-height: 110px;
+}}
+.kpi-glow {{
+  position: absolute; top: 0; left: 0; right: 0; height: 3px;
+  border-radius: 14px 14px 0 0;
+}}
+.kpi-icon {{
+  position: absolute; right: 14px; top: 12px;
+  font-size: 1.8rem; opacity: 0.08;
+}}
+.kpi-label {{
+  font-size: 0.67rem; font-weight: 700; letter-spacing: 0.7px;
+  text-transform: uppercase; color: {MUTED} !important;
+  margin-bottom: 7px;
+}}
+.kpi-val {{
+  font-size: 1.95rem; font-weight: 800;
+  color: {WHITE} !important; line-height: 1;
+}}
+.kpi-sub {{
+  font-size: 0.68rem; color: {MUTED} !important; margin-top: 5px;
+}}
+.kpi-badge {{
+  display: inline-block; padding: 2px 8px; border-radius: 20px;
+  font-size: 0.64rem; font-weight: 700; margin-top: 4px;
+}}
+.b-green  {{ background: rgba(0,184,148,0.2); color: {GREEN}; }}
+.b-red    {{ background: rgba(230,57,70,0.2);  color: {DANGER}; }}
+.b-orange {{ background: rgba(225,112,85,0.2); color: {ORANGE}; }}
+.b-gold   {{ background: rgba(253,203,110,0.2);color: {GOLD}; }}
+.b-muted  {{ background: rgba(139,163,191,0.15);color: {MUTED}; }}
+.b-teal   {{ background: rgba(0,206,201,0.2);  color: {TEAL}; }}
+
+/* ── Chart card ── */
+.chart-card {{
+  background: {CARD}; border: 1px solid {BORDER};
+  border-radius: 14px; padding: 16px 16px 8px; margin-bottom: 14px;
+}}
+.chart-title {{
+  font-size: 0.7rem; font-weight: 700; text-transform: uppercase;
+  letter-spacing: 0.5px; color: {MUTED} !important;
+  border-bottom: 1px solid {BORDER}; padding-bottom: 8px; margin-bottom: 10px;
+}}
+
+/* ── Seção title ── */
+.sec-t {{
+  font-size: 0.7rem; font-weight: 700; text-transform: uppercase;
+  letter-spacing: 0.8px; color: {MUTED} !important;
+  border-left: 3px solid {TEAL}; padding-left: 9px;
+  margin: 18px 0 12px; display: block;
+}}
+
+/* ── Tooltip ── */
+.tip {{
+  position: relative; display: inline-block;
+  cursor: help; border-bottom: 1px dashed {MUTED};
+}}
+.tip::after {{
+  content: attr(data-tip);
+  position: absolute; bottom: 120%; left: 50%;
+  transform: translateX(-50%);
+  background: {CARD2}; color: {WHITE};
+  border: 1px solid {BORDER};
+  padding: 7px 10px; border-radius: 8px;
+  font-size: 0.71rem; font-weight: 400;
+  white-space: normal; width: 230px;
+  opacity: 0; pointer-events: none;
+  transition: opacity 0.2s; z-index: 999;
+  line-height: 1.4;
+}}
+.tip:hover::after {{ opacity: 1; }}
+
+/* ── Filtro bar ── */
+.filter-bar {{
+  background: {CARD}; border: 1px solid {BORDER};
+  border-radius: 12px; padding: 12px 18px;
+  margin-bottom: 16px;
+  display: flex; align-items: flex-end; gap: 14px; flex-wrap: wrap;
+}}
+.filter-label {{
+  font-size: 0.65rem; font-weight: 700;
+  text-transform: uppercase; letter-spacing: 0.5px;
+  color: {MUTED} !important; margin-bottom: 4px;
+}}
+
+/* ── Alerta cards ── */
+.alert-card {{
+  background: rgba(230,57,70,0.08);
+  border: 1px solid rgba(230,57,70,0.3);
+  border-left: 4px solid {DANGER};
+  border-radius: 10px; padding: 11px 14px;
+  margin-bottom: 8px;
+}}
+.alert-warn {{
+  background: rgba(253,203,110,0.08);
+  border: 1px solid rgba(253,203,110,0.25);
+  border-left: 4px solid {GOLD};
+}}
+.alert-info {{
+  background: rgba(0,206,201,0.08);
+  border: 1px solid rgba(0,206,201,0.2);
+  border-left: 4px solid {TEAL};
+}}
+.alert-title {{
+  font-size: 0.8rem; font-weight: 700; color: {WHITE} !important;
+}}
+.alert-sub {{
+  font-size: 0.72rem; color: {MUTED} !important; margin-top: 2px;
+}}
+
+/* ── Ranking ── */
+.rank-row {{
+  display: flex; align-items: center; gap: 10px;
+  padding: 7px 0; border-bottom: 1px solid {BORDER};
+}}
+.rank-pos {{ font-size: 0.75rem; font-weight: 700; color: {MUTED} !important; width: 22px; text-align: center; }}
+.rank-name {{ font-size: 0.82rem; color: {WHITE} !important; flex: 1; font-weight: 500;
+              white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }}
+.rank-bg {{ flex: 2; height: 5px; background: {CARD2}; border-radius: 4px; overflow: hidden; }}
+.rank-fill {{ height: 5px; border-radius: 4px; }}
+.rank-val {{ font-size: 0.82rem; font-weight: 700; min-width: 38px; text-align: right; }}
+
+/* ── Tabela de atendentes ── */
+.att-table {{ width: 100%; border-collapse: collapse; }}
+.att-table th {{
+  font-size: 0.67rem; font-weight: 700; text-transform: uppercase;
+  letter-spacing: 0.5px; color: {MUTED} !important;
+  padding: 8px 12px; border-bottom: 1px solid {BORDER};
+  text-align: left;
+}}
+.att-table td {{
+  font-size: 0.82rem; color: {WHITE} !important;
+  padding: 9px 12px; border-bottom: 1px solid {BORDER};
+}}
+.att-table tr:hover td {{ background: {CARD2}; }}
+.bar-cell {{ display: flex; align-items: center; gap: 7px; }}
+.bar-bg {{ flex: 1; height: 6px; background: {CARD2}; border-radius: 3px; overflow: hidden; }}
+.bar-fill {{ height: 6px; border-radius: 3px; }}
+.badge-val {{
+  padding: 2px 7px; border-radius: 5px; font-size: 0.72rem; font-weight: 700;
+}}
+
+/* ── Pulse ── */
+@keyframes pulse {{
+  0%   {{ box-shadow: 0 0 0 0 rgba(0,206,201,.6); }}
+  70%  {{ box-shadow: 0 0 0 7px rgba(0,206,201,0); }}
+  100% {{ box-shadow: 0 0 0 0 rgba(0,206,201,0); }}
+}}
+.dot-live {{
+  display: inline-block; width: 7px; height: 7px;
+  background: {GREEN}; border-radius: 50%;
+  animation: pulse 2s infinite;
+  margin-right: 6px; vertical-align: middle;
+}}
+
+/* ── DataFrames ── */
+.stDataFrame {{ border: 1px solid {BORDER} !important; border-radius: 10px; }}
+[data-testid="stDataFrameResizable"] {{ background: {CARD} !important; }}
+
+/* ── Scrollbar ── */
+::-webkit-scrollbar {{ width: 5px; height: 5px; }}
+::-webkit-scrollbar-thumb {{ background: {BORDER}; border-radius: 4px; }}
+::-webkit-scrollbar-track {{ background: transparent; }}
+
+/* ── hr ── */
+hr {{ border-color: {BORDER} !important; margin: 10px 0 !important; }}
+
+/* ── info box ── */
+.stAlert {{ background: {CARD2} !important; border: 1px solid {BORDER} !important; border-radius: 10px !important; }}
 </style>
 """, unsafe_allow_html=True)
 
 
 # ── HELPERS ────────────────────────────────────────────────────────────────────
-def plotly_base(height=300, **kw):
+def pb(height=300, **kw):
+    """Plotly base layout para tema escuro."""
     return dict(
-        paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
-        margin=dict(t=12, b=8, l=8, r=8), height=height,
-        font=dict(family="Inter, sans-serif", color=GRAY1, size=11),
+        paper_bgcolor="rgba(0,0,0,0)",
+        plot_bgcolor="rgba(0,0,0,0)",
+        margin=dict(t=12, b=8, l=8, r=8),
+        height=height,
+        font=dict(family="Inter, sans-serif", color=MUTED, size=11),
         **kw
     )
 
-def card_open(title=""):
-    t = f'<div class="chart-card-title">{title}</div>' if title else ""
+def chart_open(title=""):
+    t = f'<div class="chart-title">{title}</div>' if title else ""
     return f'<div class="chart-card">{t}'
 
-def card_close():
+def chart_close():
     return '</div>'
 
-def kpi_card(label, val, sub="", icon="📊", color=RED, badge="", badge_cls="b-gray"):
-    badge_html = f'<span class="kpi-badge {badge_cls}">{badge}</span>' if badge else ""
+def tip(term, desc):
+    """Retorna span com tooltip."""
+    return f'<span class="tip" data-tip="{desc}">{term}</span>'
+
+def kpi(label, val, sub="", icon="📊", color=TEAL, badge="", bcls="b-muted", tip_text=""):
+    tip_html = f' <span class="tip" data-tip="{tip_text}" style="font-size:0.7rem;opacity:0.6">ⓘ</span>' if tip_text else ""
+    badge_html = f'<span class="kpi-badge {bcls}">{badge}</span>' if badge else ""
     return f"""
     <div class="kpi-card">
-      <div class="kpi-top-bar" style="background:{color}"></div>
+      <div class="kpi-glow" style="background:{color}"></div>
       <span class="kpi-icon">{icon}</span>
-      <div class="kpi-label">{label}</div>
+      <div class="kpi-label">{label}{tip_html}</div>
       <div class="kpi-val">{val}</div>
       <div class="kpi-sub">{sub} {badge_html}</div>
     </div>"""
 
-def ranking_html(df_rank, col_name, col_val, color=RED, max_val=None):
+def ranking_html(df_r, col_n, col_v, color=TEAL):
     medals = ["🥇", "🥈", "🥉"]
+    top = df_r[col_v].max() if not df_r.empty else 1
     rows = ""
-    top = max_val or (df_rank[col_val].max() if not df_rank.empty else 1)
-    for i, row in enumerate(df_rank.itertuples(), 1):
-        pct = int(getattr(row, col_val) / top * 100) if top > 0 else 0
-        medal = medals[i-1] if i <= 3 else f'<span class="rank-pos">{i}</span>'
+    for i, row in enumerate(df_r.itertuples(), 1):
+        pct = int(getattr(row, col_v) / top * 100) if top > 0 else 0
+        pos = medals[i-1] if i <= 3 else f'<span class="rank-pos">{i}</span>'
         rows += f"""
         <div class="rank-row">
-          <span class="medal">{medal}</span>
-          <span class="rank-name">{getattr(row, col_name)}</span>
-          <div class="rank-bar-bg"><div class="rank-bar-fill" style="width:{pct}%;background:{color}"></div></div>
-          <span class="rank-val" style="color:{color}">{getattr(row, col_val):,}</span>
+          <span style="font-size:1rem">{pos}</span>
+          <span class="rank-name">{getattr(row, col_n)}</span>
+          <div class="rank-bg"><div class="rank-fill" style="width:{pct}%;background:{color}"></div></div>
+          <span class="rank-val" style="color:{color}">{getattr(row, col_v):,}</span>
         </div>"""
     return rows
 
@@ -246,12 +350,12 @@ def ranking_html(df_rank, col_name, col_val, color=RED, max_val=None):
 @st.cache_data(ttl=1800, show_spinner="Carregando dados do banco…")
 def carregar_dados() -> pd.DataFrame:
     cfg = st.secrets["database"]
-    conn_str = (
+    conn = pyodbc.connect(
         f"DRIVER={{ODBC Driver 17 for SQL Server}};"
         f"SERVER={cfg['server']};DATABASE={cfg['database']};"
-        f"UID={cfg['username']};PWD={cfg['password']};"
+        f"UID={cfg['username']};PWD={cfg['password']};",
+        timeout=30,
     )
-    conn = pyodbc.connect(conn_str, timeout=30)
     SQL_QUERY = """
     SELECT
         Sac, CONVERT(VARCHAR(10), Data_abertura, 103) AS Data_abertura,
@@ -267,690 +371,765 @@ def carregar_dados() -> pd.DataFrame:
     conn.close()
     for col in ["Data_abertura", "Data_Solucao"]:
         df[col] = pd.to_datetime(df[col], format="%d/%m/%Y", errors="coerce")
+    # Tempo médio de resolução em horas
+    df["TMR_h"] = (df["Data_Solucao"] - df["Data_abertura"]).dt.total_seconds() / 3600
     return df
 
 
-# ═══════════════════════════════════════════════════════════════════════════════
-# PÁGINA 1 — PAINEL EXECUTIVO
-# ═══════════════════════════════════════════════════════════════════════════════
-def pagina_executivo(df, df_raw, hoje):
-    st.markdown('<span class="sec-title">📅 Análise Temporal</span>', unsafe_allow_html=True)
-    tab_dia, tab_mes, tab_ano = st.tabs(["Visão Diária", "Visão Mensal", "Visão Anual"])
+# ══════════════════════════════════════════════════════════════════════════════
+#  ABA 1 — RESUMO GERAL
+# ══════════════════════════════════════════════════════════════════════════════
+def aba_resumo(df, df_raw, hoje):
+    # ── Volume diário + média móvel ──────────────────────────────────────────
+    col_v, col_sit = st.columns([3, 2])
 
-    # ── Tab: DIÁRIA ──────────────────────────────────────────────────────────
-    with tab_dia:
-        col_a, col_b = st.columns([2, 1])
+    with col_v:
+        st.markdown(chart_open("📊 Volume Diário de Chamados + Média Móvel 7 Dias"), unsafe_allow_html=True)
+        df_d = df.groupby(df["Data_abertura"].dt.date).size().reset_index(name="Qtd")
+        df_d.columns = ["Data", "Qtd"]
+        df_d = df_d.sort_values("Data")
+        df_d["MM7"] = df_d["Qtd"].rolling(7, min_periods=1).mean().round(1)
 
-        with col_a:
-            st.markdown(card_open("📊 Volume Diário + Média Móvel 7 Dias"), unsafe_allow_html=True)
-            df_dia = df.groupby(df["Data_abertura"].dt.date).size().reset_index(name="Qtd")
-            df_dia.columns = ["Data", "Qtd"]
-            df_dia = df_dia.sort_values("Data")
-            df_dia["MM7"] = df_dia["Qtd"].rolling(7, min_periods=1).mean().round(1)
+        fig = go.Figure()
+        fig.add_bar(x=df_d["Data"], y=df_d["Qtd"], name="Chamados",
+                    marker_color=BRAND, opacity=0.7)
+        fig.add_scatter(x=df_d["Data"], y=df_d["MM7"], mode="lines",
+                        name="Média 7 dias", line=dict(color=TEAL, width=2.5))
+        fig.update_layout(**pb(260,
+            xaxis=dict(showgrid=False, color=MUTED),
+            yaxis=dict(showgrid=True, gridcolor=BORDER, color=MUTED),
+            legend=dict(orientation="h", y=1.12, x=0, font=dict(color=WHITE)),
+            bargap=0.25))
+        st.plotly_chart(fig, use_container_width=True)
+        st.markdown(chart_close(), unsafe_allow_html=True)
 
-            fig = go.Figure()
-            fig.add_bar(x=df_dia["Data"], y=df_dia["Qtd"], name="Chamados",
-                        marker_color=RED, opacity=0.75, yaxis="y")
-            fig.add_scatter(x=df_dia["Data"], y=df_dia["MM7"], mode="lines",
-                            name="Média 7d", line=dict(color=BLUE, width=2.5), yaxis="y")
-            fig.update_layout(**plotly_base(260, xaxis_title="", yaxis_title="",
-                                            legend=dict(orientation="h", y=1.12, x=0),
-                                            bargap=0.25))
-            st.plotly_chart(fig, use_container_width=True)
-            st.markdown(card_close(), unsafe_allow_html=True)
+    with col_sit:
+        st.markdown(chart_open("🔵 Situação Atual dos Chamados"), unsafe_allow_html=True)
+        df_sit = df.groupby("Situacao").size().reset_index(name="Qtd")
+        fig_sit = px.pie(df_sit, names="Situacao", values="Qtd", hole=0.55,
+                          color_discrete_sequence=CORES)
+        fig_sit.update_traces(textposition="outside", textinfo="label+percent",
+                               textfont=dict(size=11, color=WHITE),
+                               marker=dict(line=dict(color=BG, width=2)))
+        fig_sit.update_layout(**pb(260, showlegend=False))
+        st.plotly_chart(fig_sit, use_container_width=True)
+        st.markdown(chart_close(), unsafe_allow_html=True)
 
-        with col_b:
-            st.markdown(card_open("🗓️ Distribuição Dia da Semana"), unsafe_allow_html=True)
-            dias_pt = {0:"Seg",1:"Ter",2:"Qua",3:"Qui",4:"Sex",5:"Sáb",6:"Dom"}
-            df["DiaSem"] = df["Data_abertura"].dt.dayofweek.map(dias_pt)
-            ordem = ["Seg","Ter","Qua","Qui","Sex","Sáb","Dom"]
-            df_sem = df.groupby("DiaSem").size().reset_index(name="Qtd")
-            df_sem["ord"] = df_sem["DiaSem"].map({d:i for i,d in enumerate(ordem)})
-            df_sem = df_sem.sort_values("ord")
+    # ── Principais motivos + canais ──────────────────────────────────────────
+    col_mot, col_orig = st.columns([3, 2])
 
-            fig2 = px.bar(df_sem, x="DiaSem", y="Qtd", text="Qtd",
-                          color="Qtd", color_continuous_scale=[[0, GRAY3],[1, RED]])
-            fig2.update_traces(textposition="outside", cliponaxis=False)
-            fig2.update_coloraxes(showscale=False)
-            fig2.update_layout(**plotly_base(260, xaxis_title="", yaxis_title="", xaxis=dict(categoryorder="array", categoryarray=ordem)))
-            st.plotly_chart(fig2, use_container_width=True)
-            st.markdown(card_close(), unsafe_allow_html=True)
-
-        # Heatmap Calendário (GitHub-style)
-        st.markdown(card_open("🔥 Mapa de Calor — Densidade de Chamados por Data"), unsafe_allow_html=True)
-        df_cal = df.copy()
-        df_cal = df_cal.dropna(subset=["Data_abertura"])
-        df_cal["date"] = df_cal["Data_abertura"].dt.date
-        df_cal["dow"] = df_cal["Data_abertura"].dt.dayofweek
-        df_cal["week"] = df_cal["Data_abertura"].dt.isocalendar().week.astype(int)
-        df_cal["year"] = df_cal["Data_abertura"].dt.year
-        df_cal["yw"] = df_cal["year"].astype(str) + "-W" + df_cal["week"].astype(str).str.zfill(2)
-
-        if not df_cal.empty:
-            contagem_cal = df_cal.groupby(["yw", "dow"]).size().reset_index(name="Qtd")
-            pivot_cal = contagem_cal.pivot(index="dow", columns="yw", values="Qtd").fillna(0)
-            dias_labels = ["Seg","Ter","Qua","Qui","Sex","Sáb","Dom"]
-            pivot_cal.index = [dias_labels[i] if i < len(dias_labels) else i for i in pivot_cal.index]
-
-            # Mostrar apenas últimas 26 semanas para não sobrecarregar
-            colunas = sorted(pivot_cal.columns)[-26:]
-            pivot_cal = pivot_cal[colunas]
-
-            fig_cal = px.imshow(
-                pivot_cal, aspect="auto",
-                color_continuous_scale=[[0,"#F0F2F6"],[0.3,"#FFB3B3"],[1, RED]],
-                labels=dict(color="Chamados"),
-            )
-            fig_cal.update_layout(**plotly_base(160,
-                xaxis=dict(showticklabels=True, tickangle=-45, tickfont_size=9),
-                yaxis=dict(showticklabels=True),
-                coloraxis_showscale=False,
-            ))
-            fig_cal.update_traces(hovertemplate="Semana: %{x}<br>Dia: %{y}<br>Chamados: %{z}<extra></extra>")
-            st.plotly_chart(fig_cal, use_container_width=True)
-        st.markdown(card_close(), unsafe_allow_html=True)
-
-    # ── Tab: MENSAL ──────────────────────────────────────────────────────────
-    with tab_mes:
-        df_men = df.copy()
-        df_men["MesAno"] = df_men["Data_abertura"].dt.to_period("M").astype(str)
-        df_men["AnoN"] = df_men["Data_abertura"].dt.year.astype(str)
-        df_men["MesN"] = df_men["Data_abertura"].dt.month
-
-        col_m1, col_m2 = st.columns([3, 2])
-        with col_m1:
-            st.markdown(card_open("📈 Evolução Mensal (Linha + Barras)"), unsafe_allow_html=True)
-            cnt_men = df_men.groupby("MesAno").size().reset_index(name="Qtd").sort_values("MesAno")
-            cnt_men["Delta"] = cnt_men["Qtd"].diff()
-            cnt_men["Cor"] = cnt_men["Delta"].apply(lambda x: GREEN if (x is None or x <= 0) else RED)
-
-            fig_m = go.Figure()
-            fig_m.add_bar(x=cnt_men["MesAno"], y=cnt_men["Qtd"],
-                          marker_color=[RED if d > 0 else GREEN for d in cnt_men["Delta"].fillna(0)],
-                          name="Volume", opacity=0.7)
-            fig_m.add_scatter(x=cnt_men["MesAno"], y=cnt_men["Qtd"], mode="lines+markers",
-                              line=dict(color=DARK, width=2), marker=dict(size=5), name="Tendência")
-            fig_m.update_layout(**plotly_base(260, xaxis_title="", yaxis_title="",
-                                              legend=dict(orientation="h", y=1.12, x=0)))
-            st.plotly_chart(fig_m, use_container_width=True)
-            st.markdown(card_close(), unsafe_allow_html=True)
-
-        with col_m2:
-            st.markdown(card_open("📊 Comparativo Ano a Ano por Mês"), unsafe_allow_html=True)
-            meses_pt = {1:"Jan",2:"Fev",3:"Mar",4:"Abr",5:"Mai",6:"Jun",
-                        7:"Jul",8:"Ago",9:"Set",10:"Out",11:"Nov",12:"Dez"}
-            cnt_ym = df_men.groupby(["AnoN","MesN"]).size().reset_index(name="Qtd")
-            cnt_ym["Mes_Label"] = cnt_ym["MesN"].map(meses_pt)
-            cnt_ym = cnt_ym.sort_values(["AnoN","MesN"])
-
-            fig_ym = px.line(cnt_ym, x="Mes_Label", y="Qtd", color="AnoN", markers=True,
-                             color_discrete_sequence=CORES,
-                             category_orders={"Mes_Label": list(meses_pt.values())})
-            fig_ym.update_layout(**plotly_base(260, xaxis_title="", yaxis_title="",
-                                               legend=dict(orientation="h", y=1.12, x=0, title="")))
-            st.plotly_chart(fig_ym, use_container_width=True)
-            st.markdown(card_close(), unsafe_allow_html=True)
-
-        # FCR mensal
-        st.markdown(card_open("⚡ FCR (Finalizado Mesmo Dia) — Evolução Mensal"), unsafe_allow_html=True)
-        df_fcr_men = df_men.groupby("MesAno").agg(Total=("Sac","count"), FCR=("Finalizado_Mesmo_Dia","sum")).reset_index()
-        df_fcr_men["FCR_Pct"] = (df_fcr_men["FCR"] / df_fcr_men["Total"] * 100).round(1)
-        df_fcr_men = df_fcr_men.sort_values("MesAno")
-
-        fig_fcr_men = go.Figure()
-        fig_fcr_men.add_bar(x=df_fcr_men["MesAno"], y=df_fcr_men["Total"],
-                             name="Total Chamados", marker_color=GRAY3, yaxis="y")
-        fig_fcr_men.add_scatter(x=df_fcr_men["MesAno"], y=df_fcr_men["FCR_Pct"],
-                                mode="lines+markers+text", name="FCR %",
-                                line=dict(color=GOLD, width=2.5), marker=dict(size=6),
-                                text=df_fcr_men["FCR_Pct"].astype(str)+"%",
-                                textposition="top center", textfont=dict(size=9, color=GOLD),
-                                yaxis="y2")
-        fig_fcr_men.add_hline(y=70, line_dash="dash", line_color=GREEN, opacity=0.5,
-                               annotation_text="Meta 70%", annotation_position="top right",
-                               yref="y2")
-        fig_fcr_men.update_layout(**plotly_base(220,
-            xaxis_title="", yaxis=dict(title="Chamados", showgrid=False),
-            yaxis2=dict(title="FCR %", overlaying="y", side="right", range=[0,110],
-                        showgrid=False, ticksuffix="%"),
-            legend=dict(orientation="h", y=1.15, x=0),
-        ))
-        st.plotly_chart(fig_fcr_men, use_container_width=True)
-        st.markdown(card_close(), unsafe_allow_html=True)
-
-    # ── Tab: ANUAL ───────────────────────────────────────────────────────────
-    with tab_ano:
-        col_a1, col_a2 = st.columns([1, 1])
-        df_ano_g = df.groupby("Ano_abertura").agg(Total=("Sac","count"), FCR=("Finalizado_Mesmo_Dia","sum")).reset_index()
-        df_ano_g["FCR_Pct"] = (df_ano_g["FCR"] / df_ano_g["Total"] * 100).round(1)
-        df_ano_g["Ano_abertura"] = df_ano_g["Ano_abertura"].astype(str)
-
-        with col_a1:
-            st.markdown(card_open("📆 Total de Chamados por Ano"), unsafe_allow_html=True)
-            fig_ya = px.bar(df_ano_g, x="Ano_abertura", y="Total", text="Total",
-                            color="Total", color_continuous_scale=[[0,GRAY3],[1,RED]])
-            fig_ya.update_traces(textposition="outside", cliponaxis=False)
-            fig_ya.update_coloraxes(showscale=False)
-            fig_ya.update_layout(**plotly_base(270, xaxis_title="", yaxis_title=""))
-            st.plotly_chart(fig_ya, use_container_width=True)
-            st.markdown(card_close(), unsafe_allow_html=True)
-
-        with col_a2:
-            st.markdown(card_open("⚡ FCR % por Ano"), unsafe_allow_html=True)
-            fig_yf = go.Figure()
-            fig_yf.add_bar(x=df_ano_g["Ano_abertura"], y=df_ano_g["FCR_Pct"],
-                           marker_color=[GREEN if v >= 70 else ORANGE for v in df_ano_g["FCR_Pct"]],
-                           text=df_ano_g["FCR_Pct"].astype(str)+"%", textposition="outside")
-            fig_yf.add_hline(y=70, line_dash="dash", line_color=RED, opacity=0.6,
-                              annotation_text="Meta 70%")
-            fig_yf.update_layout(**plotly_base(270, xaxis_title="", yaxis_title="FCR %",
-                                               yaxis_range=[0, 110]))
-            st.plotly_chart(fig_yf, use_container_width=True)
-            st.markdown(card_close(), unsafe_allow_html=True)
-
-        # Sunburst geral Ano > Mês > Situação
-        st.markdown(card_open("🌐 Hierarquia: Ano → Situação → Módulo (Top 5)"), unsafe_allow_html=True)
-        df_sun = df.copy()
-        df_sun["Ano_str"] = df_sun["Ano_abertura"].astype(str)
-        top5_mod = df_sun["Modulo"].value_counts().nlargest(5).index
-        df_sun["Modulo_s"] = df_sun["Modulo"].apply(lambda x: x if x in top5_mod else "Outros")
-        df_sun_g = df_sun.groupby(["Ano_str", "Situacao", "Modulo_s"]).size().reset_index(name="Qtd")
-
-        fig_sun = px.sunburst(df_sun_g, path=["Ano_str","Situacao","Modulo_s"], values="Qtd",
-                              color_discrete_sequence=CORES)
-        fig_sun.update_layout(**plotly_base(360))
-        fig_sun.update_traces(textfont_size=11)
-        st.plotly_chart(fig_sun, use_container_width=True)
-        st.markdown(card_close(), unsafe_allow_html=True)
-
-
-# ═══════════════════════════════════════════════════════════════════════════════
-# PÁGINA 2 — TIME DE SUPORTE
-# ═══════════════════════════════════════════════════════════════════════════════
-def pagina_time(df):
-    st.markdown('<span class="sec-title">👥 Desempenho Individual da Equipe</span>', unsafe_allow_html=True)
-
-    # Quadrante de Eficiência
-    col_q, col_rank = st.columns([3, 2])
-
-    df_at = df.groupby("Atendente").agg(
-        Total=("Sac","count"),
-        FCR=("Finalizado_Mesmo_Dia","sum"),
-        Abertos=("Data_Solucao", lambda x: x.isna().sum()),
-    ).reset_index()
-    df_at["FCR_Pct"] = (df_at["FCR"] / df_at["Total"] * 100).round(1)
-    df_at = df_at[df_at["Total"] > 0]
-
-    with col_q:
-        st.markdown(card_open("🎯 Quadrante de Eficiência — Volume vs FCR%"), unsafe_allow_html=True)
-        med_total = df_at["Total"].median()
-        med_fcr   = df_at["FCR_Pct"].median()
-
-        fig_q = go.Figure()
-        # Quadrant fill areas
-        max_total = df_at["Total"].max() * 1.2
-        fig_q.add_shape(type="rect", x0=med_total, x1=max_total, y0=med_fcr, y1=110,
-                        fillcolor="rgba(0,184,148,0.06)", line_width=0)
-        fig_q.add_shape(type="rect", x0=0, x1=med_total, y0=med_fcr, y1=110,
-                        fillcolor="rgba(9,132,227,0.06)", line_width=0)
-        fig_q.add_shape(type="rect", x0=med_total, x1=max_total, y0=0, y1=med_fcr,
-                        fillcolor="rgba(253,203,110,0.1)", line_width=0)
-        fig_q.add_shape(type="rect", x0=0, x1=med_total, y0=0, y1=med_fcr,
-                        fillcolor="rgba(225,112,85,0.07)", line_width=0)
-        # Crosshair
-        fig_q.add_vline(x=med_total, line_color=GRAY2, line_dash="dot", line_width=1.5)
-        fig_q.add_hline(y=med_fcr,   line_color=GRAY2, line_dash="dot", line_width=1.5)
-
-        fig_q.add_scatter(
-            x=df_at["Total"], y=df_at["FCR_Pct"],
-            mode="markers+text",
-            text=df_at["Atendente"],
-            textposition="top center",
-            textfont=dict(size=10, color=DARK),
-            marker=dict(size=df_at["Total"]**0.55 * 2.5, color=RED,
-                        opacity=0.75, line=dict(color=WHITE, width=1.5)),
-            hovertemplate="<b>%{text}</b><br>Chamados: %{x}<br>FCR: %{y:.1f}%<extra></extra>",
+    with col_mot:
+        st.markdown(chart_open("🎯 Principais Motivos de Contato (Treemap)"), unsafe_allow_html=True)
+        df_mot = df.groupby("Motivo").size().reset_index(name="Qtd").nlargest(20, "Qtd")
+        fig_mot = px.treemap(df_mot, path=["Motivo"], values="Qtd",
+                              color="Qtd",
+                              color_continuous_scale=[[0, CARD2],[0.5, BRAND],[1, "#FF6B6B"]])
+        fig_mot.update_coloraxes(showscale=False)
+        fig_mot.update_traces(
+            textfont=dict(size=12, color=WHITE),
+            marker=dict(line=dict(width=1.5, color=BG)),
         )
-        # Quadrant labels
-        fig_q.add_annotation(x=max_total*0.97, y=107, text="⭐ Alta Eficiência",
-                              showarrow=False, font=dict(size=9, color=GREEN), xanchor="right")
-        fig_q.add_annotation(x=max_total*0.03, y=107, text="🧘 Baixo Volume / Boa FCR",
-                              showarrow=False, font=dict(size=9, color=BLUE), xanchor="left")
-        fig_q.add_annotation(x=max_total*0.97, y=med_fcr*0.15, text="🔥 Volume Alto / FCR Baixa",
-                              showarrow=False, font=dict(size=9, color=ORANGE), xanchor="right")
-        fig_q.add_annotation(x=max_total*0.03, y=med_fcr*0.15, text="⚠️ Atenção",
-                              showarrow=False, font=dict(size=9, color=RED), xanchor="left")
+        fig_mot.update_layout(**pb(300))
+        st.plotly_chart(fig_mot, use_container_width=True)
+        st.markdown(chart_close(), unsafe_allow_html=True)
 
-        fig_q.update_layout(**plotly_base(320,
-            xaxis=dict(title="Total de Chamados", zeroline=False, showgrid=False),
-            yaxis=dict(title="FCR %", zeroline=False, showgrid=False, range=[0,110]),
-        ))
-        st.plotly_chart(fig_q, use_container_width=True)
-        st.markdown(card_close(), unsafe_allow_html=True)
+    with col_orig:
+        st.markdown(chart_open("📡 Canal de Entrada (Origem)"), unsafe_allow_html=True)
+        df_or = df.groupby("Origem").size().reset_index(name="Qtd").sort_values("Qtd")
+        fig_or = px.bar(df_or, y="Origem", x="Qtd", orientation="h",
+                         text="Qtd", color="Qtd",
+                         color_continuous_scale=[[0, CARD2],[1, TEAL]])
+        fig_or.update_traces(textposition="outside", cliponaxis=False,
+                              textfont=dict(color=WHITE))
+        fig_or.update_coloraxes(showscale=False)
+        fig_or.update_layout(**pb(300,
+            xaxis=dict(showgrid=False), yaxis=dict(showgrid=False),
+            yaxis_title="", xaxis_title=""))
+        st.plotly_chart(fig_or, use_container_width=True)
+        st.markdown(chart_close(), unsafe_allow_html=True)
+
+    # ── Tendência mensal ─────────────────────────────────────────────────────
+    st.markdown(chart_open("📈 Tendência de Volume — Mensal (Chamados Abertos vs Resolvidos)"), unsafe_allow_html=True)
+    df_men = df.copy()
+    df_men["MesAno"] = df_men["Data_abertura"].dt.to_period("M").astype(str)
+    abertos_m  = df_men.groupby("MesAno").size().reset_index(name="Abertos")
+    resolvidos_m = df_men[df_men["Data_Solucao"].notna()].groupby("MesAno").size().reset_index(name="Resolvidos")
+    df_trend = abertos_m.merge(resolvidos_m, on="MesAno", how="left").fillna(0).sort_values("MesAno")
+
+    fig_t = go.Figure()
+    fig_t.add_scatter(x=df_trend["MesAno"], y=df_trend["Abertos"], mode="lines+markers",
+                      name="Abertos", line=dict(color=BRAND, width=2.5), marker=dict(size=5))
+    fig_t.add_scatter(x=df_trend["MesAno"], y=df_trend["Resolvidos"], mode="lines+markers",
+                      name="Resolvidos", line=dict(color=GREEN, width=2.5), marker=dict(size=5))
+    fig_t.add_traces([go.Scatter(
+        x=df_trend["MesAno"].tolist() + df_trend["MesAno"].tolist()[::-1],
+        y=df_trend["Abertos"].tolist() + df_trend["Resolvidos"].tolist()[::-1],
+        fill="toself", fillcolor="rgba(0,184,148,0.07)",
+        line=dict(width=0), showlegend=False, hoverinfo="skip"
+    )])
+    fig_t.update_layout(**pb(230,
+        xaxis=dict(showgrid=False, color=MUTED),
+        yaxis=dict(showgrid=True, gridcolor=BORDER, color=MUTED),
+        legend=dict(orientation="h", y=1.12, x=0, font=dict(color=WHITE))))
+    st.plotly_chart(fig_t, use_container_width=True)
+    st.markdown(chart_close(), unsafe_allow_html=True)
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+#  ABA 2 — CLIENTES
+# ══════════════════════════════════════════════════════════════════════════════
+def aba_clientes(df):
+    col_tree, col_rank = st.columns([3, 2])
+
+    with col_tree:
+        st.markdown(chart_open("📦 Volume de Chamados por Cliente (Treemap)"), unsafe_allow_html=True)
+        df_cli = df.groupby("Cliente").size().reset_index(name="Qtd").nlargest(30, "Qtd")
+        fig_tree = px.treemap(df_cli, path=["Cliente"], values="Qtd",
+                               color="Qtd",
+                               color_continuous_scale=[[0, CARD2],[0.4, BRAND],[1, "#FF6B6B"]])
+        fig_tree.update_coloraxes(showscale=False)
+        fig_tree.update_traces(
+            textfont=dict(size=11, color=WHITE),
+            marker=dict(line=dict(width=1.5, color=BG))
+        )
+        fig_tree.update_layout(**pb(340))
+        st.plotly_chart(fig_tree, use_container_width=True)
+        st.markdown(chart_close(), unsafe_allow_html=True)
 
     with col_rank:
-        st.markdown(card_open("🏆 Ranking de Chamados por Atendente"), unsafe_allow_html=True)
-        df_rank = df_at.sort_values("Total", ascending=False).head(15)
-        html_rank = ranking_html(df_rank, "Atendente", "Total", RED)
-        st.markdown(html_rank, unsafe_allow_html=True)
-        st.markdown(card_close(), unsafe_allow_html=True)
+        st.markdown(chart_open("🏆 Top 15 Clientes"), unsafe_allow_html=True)
+        df_rc = df.groupby("Cliente").size().reset_index(name="Total").sort_values("Total", ascending=False).head(15)
+        st.markdown(ranking_html(df_rc, "Cliente", "Total", TEAL), unsafe_allow_html=True)
+        st.markdown(chart_close(), unsafe_allow_html=True)
 
-    st.markdown('<span class="sec-title">📊 Análise Detalhada</span>', unsafe_allow_html=True)
-    col_s1, col_s2 = st.columns(2)
+    # Sunburst Cliente → Módulo → Situação
+    col_sun, col_cont = st.columns([3, 2])
+    with col_sun:
+        st.markdown(chart_open("🌐 Hierarquia: Cliente → Módulo → Situação (Top 10 Clientes)"), unsafe_allow_html=True)
+        top10 = df.groupby("Cliente").size().nlargest(10).index
+        df_s = df[df["Cliente"].isin(top10)].copy()
+        top5m = df_s["Modulo"].value_counts().nlargest(5).index
+        df_s["Modulo_s"] = df_s["Modulo"].apply(lambda x: x if x in top5m else "Outros")
+        df_sg = df_s.groupby(["Cliente","Modulo_s","Situacao"]).size().reset_index(name="Qtd")
+        fig_sun = px.sunburst(df_sg, path=["Cliente","Modulo_s","Situacao"],
+                               values="Qtd", color_discrete_sequence=CORES)
+        fig_sun.update_layout(**pb(380))
+        fig_sun.update_traces(textfont=dict(size=10, color=WHITE))
+        st.plotly_chart(fig_sun, use_container_width=True)
+        st.markdown(chart_close(), unsafe_allow_html=True)
 
-    with col_s1:
-        st.markdown(card_open("✅ Resolvidos vs 📌 Em Aberto — por Atendente"), unsafe_allow_html=True)
-        df_sit_at = df.copy()
-        df_sit_at["Status"] = df_sit_at["Data_Solucao"].apply(lambda x: "Resolvido" if pd.notna(x) else "Em Aberto")
-        df_grp = df_sit_at.groupby(["Atendente","Status"]).size().reset_index(name="Qtd")
-        df_grp = df_grp.sort_values("Qtd", ascending=False)
+    with col_cont:
+        st.markdown(chart_open("🗣️ Top 15 Contatos que Mais Acionaram o Suporte"), unsafe_allow_html=True)
+        df_rc2 = df.groupby("Contato").size().reset_index(name="Total").sort_values("Total", ascending=False).head(15)
+        st.markdown(ranking_html(df_rc2, "Contato", "Total", GOLD), unsafe_allow_html=True)
+        st.markdown(chart_close(), unsafe_allow_html=True)
 
-        qtd_at = df["Atendente"].nunique()
-        fig_st = px.bar(df_grp, y="Atendente", x="Qtd", color="Status", orientation="h",
-                        barmode="stack", text="Qtd",
-                        color_discrete_map={"Resolvido": GREEN, "Em Aberto": RED},
-                        category_orders={"Atendente": df_at.sort_values("Total", ascending=False)["Atendente"].tolist()})
-        fig_st.update_traces(textposition="inside", textfont_size=9, cliponaxis=False)
-        fig_st.update_layout(**plotly_base(max(280, qtd_at*34),
-                                           yaxis_title="", xaxis_title="",
-                                           legend=dict(orientation="h", y=1.1, x=0, title="")))
-        st.plotly_chart(fig_st, use_container_width=True)
-        st.markdown(card_close(), unsafe_allow_html=True)
+    # Raio-X do cliente
+    st.markdown('<span class="sec-t">🔍 Raio-X do Cliente</span>', unsafe_allow_html=True)
+    st.markdown(chart_open(""), unsafe_allow_html=True)
+    clientes = sorted(df["Cliente"].dropna().unique())
+    cli_sel = st.selectbox("Selecione o Cliente:", clientes, label_visibility="collapsed")
+    if cli_sel:
+        df_ce = df[df["Cliente"] == cli_sel]
+        tot_ce  = len(df_ce)
+        ab_ce   = df_ce["Data_Solucao"].isna().sum()
+        fcr_ce  = df_ce["Finalizado_Mesmo_Dia"].sum() / tot_ce * 100 if tot_ce > 0 else 0
+        tmr_ce  = df_ce[df_ce["TMR_h"] > 0]["TMR_h"].mean()
+        tmr_str = f"{tmr_ce:.1f}h" if (not pd.isna(tmr_ce) and tmr_ce < 72) else (f"{tmr_ce/24:.1f} dias" if not pd.isna(tmr_ce) else "N/D")
 
-    with col_s2:
-        st.markdown(card_open("📡 Canal de Entrada (Origem) — por Atendente"), unsafe_allow_html=True)
-        df_orig_at = df.groupby(["Atendente","Origem"]).size().reset_index(name="Qtd")
-        fig_orig = px.bar(df_orig_at, y="Atendente", x="Qtd", color="Origem", orientation="h",
-                          barmode="stack", text="Qtd", color_discrete_sequence=CORES,
-                          category_orders={"Atendente": df_at.sort_values("Total", ascending=False)["Atendente"].tolist()})
-        fig_orig.update_traces(textposition="inside", textfont_size=9, cliponaxis=False)
-        fig_orig.update_layout(**plotly_base(max(280, qtd_at*34),
-                                              yaxis_title="", xaxis_title="",
-                                              legend=dict(orientation="h", y=1.1, x=0, title="")))
-        st.plotly_chart(fig_orig, use_container_width=True)
-        st.markdown(card_close(), unsafe_allow_html=True)
+        st.markdown(f"""
+        <div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:14px">
+          {kpi("Total de Chamados", f"{tot_ce:,}", "", "📋", TEAL)}
+          {kpi("Em Aberto", f"{ab_ce:,}", "", "📌", ORANGE)}
+          {kpi("FCR", f"{fcr_ce:.1f}%", "1º contato", "⚡", GOLD,
+               tip_text="Resolução no Primeiro Contato: % de chamados finalizados sem retorno.")}
+          {kpi("Tempo Médio Resolução", tmr_str, "", "⏱️", GREEN,
+               tip_text="Tempo médio entre abertura e fechamento do chamado.")}
+        </div>
+        """, unsafe_allow_html=True)
 
-    # Heatmap atendente × módulo
-    st.markdown(card_open("🧩 Mapa de Calor — Atendente × Módulo"), unsafe_allow_html=True)
-    top5_mod = df["Modulo"].value_counts().nlargest(6).index
-    df_hm = df.copy()
-    df_hm["Modulo_x"] = df_hm["Modulo"].apply(lambda x: x if x in top5_mod else "Outros")
-    df_hm_g = df_hm.groupby(["Atendente","Modulo_x"]).size().reset_index(name="Qtd")
-    df_piv = df_hm_g.pivot(index="Atendente", columns="Modulo_x", values="Qtd").fillna(0)
+        c1, c2, c3 = st.columns(3)
+        with c1:
+            st.markdown("**Top Contatos**")
+            df_ct = df_ce.groupby("Contato").size().reset_index(name="Qtd").nlargest(8,"Qtd").sort_values("Qtd")
+            fig_ct = px.bar(df_ct, y="Contato", x="Qtd", orientation="h", text="Qtd",
+                             color="Qtd", color_continuous_scale=[[0,CARD2],[1,TEAL]])
+            fig_ct.update_coloraxes(showscale=False)
+            fig_ct.update_traces(textposition="outside", cliponaxis=False, textfont=dict(color=WHITE))
+            fig_ct.update_layout(**pb(240, yaxis_title="", xaxis_title="",
+                                      xaxis=dict(showgrid=False), yaxis=dict(showgrid=False)))
+            st.plotly_chart(fig_ct, use_container_width=True)
+        with c2:
+            st.markdown("**Módulos Demandados**")
+            df_mc = df_ce.groupby("Modulo").size().reset_index(name="Qtd").nlargest(8,"Qtd").sort_values("Qtd")
+            fig_mc = px.bar(df_mc, y="Modulo", x="Qtd", orientation="h", text="Qtd",
+                             color="Qtd", color_continuous_scale=[[0,CARD2],[1,BRAND]])
+            fig_mc.update_coloraxes(showscale=False)
+            fig_mc.update_traces(textposition="outside", cliponaxis=False, textfont=dict(color=WHITE))
+            fig_mc.update_layout(**pb(240, yaxis_title="", xaxis_title="",
+                                       xaxis=dict(showgrid=False), yaxis=dict(showgrid=False)))
+            st.plotly_chart(fig_mc, use_container_width=True)
+        with c3:
+            st.markdown("**Origem dos Contatos**")
+            df_oc = df_ce.groupby("Origem").size().reset_index(name="Qtd")
+            fig_oc = px.pie(df_oc, names="Origem", values="Qtd", hole=0.52,
+                             color_discrete_sequence=CORES)
+            fig_oc.update_traces(textposition="inside", textinfo="percent+label",
+                                  textfont=dict(size=10, color=WHITE))
+            fig_oc.update_layout(**pb(240, showlegend=False))
+            st.plotly_chart(fig_oc, use_container_width=True)
+    st.markdown(chart_close(), unsafe_allow_html=True)
 
-    fig_hm = px.imshow(df_piv, text_auto=True, aspect="auto",
-                       color_continuous_scale=[[0, GRAY3],[0.5, "#FFB3B3"],[1, RED]])
-    fig_hm.update_coloraxes(showscale=False)
-    fig_hm.update_layout(**plotly_base(max(300, df_piv.shape[0]*40),
-                                        xaxis_title="", yaxis_title=""))
-    st.plotly_chart(fig_hm, use_container_width=True)
-    st.markdown(card_close(), unsafe_allow_html=True)
 
-    # FCR gauge por atendente
-    st.markdown('<span class="sec-title">⚡ FCR — Finalização no Mesmo Dia</span>', unsafe_allow_html=True)
-    st.markdown(card_open(""), unsafe_allow_html=True)
-    df_fcr_at = df_at[["Atendente","FCR_Pct","Total"]].sort_values("FCR_Pct", ascending=False)
-    n_at = len(df_fcr_at)
-    colunas_gauge = st.columns(min(n_at, 5))
-    for i, (_, row) in enumerate(df_fcr_at.iterrows()):
-        if i >= 5: break
-        cor = GREEN if row["FCR_Pct"] >= 70 else (ORANGE if row["FCR_Pct"] >= 50 else RED)
+# ══════════════════════════════════════════════════════════════════════════════
+#  ABA 3 — ATENDENTES
+# ══════════════════════════════════════════════════════════════════════════════
+def aba_atendentes(df):
+    df_at = df.groupby("Atendente").agg(
+        Total=("Sac","count"),
+        Resolvidos=("Data_Solucao", lambda x: x.notna().sum()),
+        Em_Aberto=("Data_Solucao", lambda x: x.isna().sum()),
+        FCR=("Finalizado_Mesmo_Dia","sum"),
+        TMR_medio=("TMR_h", lambda x: x[x>0].mean()),
+    ).reset_index()
+    df_at["FCR_pct"] = (df_at["FCR"] / df_at["Total"] * 100).round(1)
+    df_at["Enc_pct"] = (df_at["Resolvidos"] / df_at["Total"] * 100).round(1)
+    df_at["TMR_str"] = df_at["TMR_medio"].apply(
+        lambda x: f"{x:.0f}h" if (not pd.isna(x) and x < 72) else (f"{x/24:.1f}d" if not pd.isna(x) else "N/D")
+    )
+    df_at = df_at.sort_values("Total", ascending=False)
+
+    # Tabela de performance
+    st.markdown('<span class="sec-t">📋 Tabela de Performance por Atendente</span>', unsafe_allow_html=True)
+    st.markdown(chart_open(""), unsafe_allow_html=True)
+
+    max_fcr = df_at["FCR_pct"].max() or 1
+    max_enc = df_at["Enc_pct"].max() or 1
+    max_tot = df_at["Total"].max() or 1
+
+    rows_html = ""
+    for _, r in df_at.iterrows():
+        fcr_cor  = GREEN  if r["FCR_pct"] >= 70 else (GOLD if r["FCR_pct"] >= 50 else DANGER)
+        enc_cor  = GREEN  if r["Enc_pct"] >= 80 else (GOLD if r["Enc_pct"] >= 60 else ORANGE)
+        fcr_pct  = int(r["FCR_pct"] / max_fcr * 100)
+        enc_pct  = int(r["Enc_pct"] / max_enc * 100)
+        tot_pct  = int(r["Total"]   / max_tot * 100)
+        rows_html += f"""
+        <tr>
+          <td><b>{r['Atendente']}</b></td>
+          <td>
+            <div class="bar-cell">
+              <div class="bar-bg"><div class="bar-fill" style="width:{tot_pct}%;background:{TEAL}"></div></div>
+              <span style="min-width:30px;font-weight:700;color:{TEAL}">{r['Total']:,}</span>
+            </div>
+          </td>
+          <td style="color:{GREEN}">{r['Resolvidos']:,}</td>
+          <td style="color:{ORANGE}">{r['Em_Aberto']:,}</td>
+          <td>
+            <div class="bar-cell">
+              <div class="bar-bg"><div class="bar-fill" style="width:{fcr_pct}%;background:{fcr_cor}"></div></div>
+              <span class="badge-val" style="background:rgba(0,0,0,0.2);color:{fcr_cor}">{r['FCR_pct']:.0f}%</span>
+            </div>
+          </td>
+          <td>
+            <div class="bar-cell">
+              <div class="bar-bg"><div class="bar-fill" style="width:{enc_pct}%;background:{enc_cor}"></div></div>
+              <span class="badge-val" style="background:rgba(0,0,0,0.2);color:{enc_cor}">{r['Enc_pct']:.0f}%</span>
+            </div>
+          </td>
+          <td style="color:{MUTED}">{r['TMR_str']}</td>
+        </tr>"""
+
+    fcr_tip = tip("FCR%", "Resolução no 1º Contato: % de chamados finalizados sem retorno do cliente. Meta recomendada: 70%")
+    enc_tip = tip("Enc.%", "Taxa de Encerramento: % de chamados resolvidos em relação ao total atribuído ao atendente no período")
+    tmr_tip = tip("TMR", "Tempo Médio de Resolução: tempo médio entre abertura e fechamento do chamado")
+
+    st.markdown(f"""
+    <table class="att-table">
+      <thead>
+        <tr>
+          <th>Atendente</th>
+          <th>Total Chamados</th>
+          <th>Resolvidos</th>
+          <th>Em Aberto</th>
+          <th>{fcr_tip}</th>
+          <th>{enc_tip}</th>
+          <th>{tmr_tip}</th>
+        </tr>
+      </thead>
+      <tbody>{rows_html}</tbody>
+    </table>
+    """, unsafe_allow_html=True)
+    st.markdown(chart_close(), unsafe_allow_html=True)
+
+    st.markdown("<br>", unsafe_allow_html=True)
+
+    # Quadrante eficiência + heatmap
+    col_q, col_hm = st.columns([3, 2])
+
+    with col_q:
+        st.markdown(chart_open(f"🎯 Quadrante de Eficiência — Volume vs {tip('FCR%', 'Porcentagem de chamados resolvidos no primeiro contato')}"), unsafe_allow_html=True)
+        med_t = df_at["Total"].median()
+        med_f = df_at["FCR_pct"].median()
+        max_t = df_at["Total"].max() * 1.25
+
+        fig_q = go.Figure()
+        for rect, color in [
+            ((med_t, max_t, med_f, 102), f"rgba(0,184,148,0.06)"),
+            ((0, med_t, med_f, 102),     f"rgba(0,180,216,0.06)"),
+            ((med_t, max_t, 0, med_f),   f"rgba(225,112,85,0.06)"),
+            ((0, med_t, 0, med_f),       f"rgba(230,57,70,0.06)"),
+        ]:
+            fig_q.add_shape(type="rect", x0=rect[0], x1=rect[1], y0=rect[2], y1=rect[3],
+                             fillcolor=color, line_width=0)
+        fig_q.add_vline(x=med_t, line_color=BORDER, line_dash="dot", line_width=1.5)
+        fig_q.add_hline(y=med_f, line_color=BORDER, line_dash="dot", line_width=1.5)
+        fig_q.add_scatter(
+            x=df_at["Total"], y=df_at["FCR_pct"],
+            mode="markers+text", text=df_at["Atendente"],
+            textposition="top center",
+            textfont=dict(size=10, color=WHITE),
+            marker=dict(size=df_at["Total"]**0.55*2.5, color=TEAL, opacity=0.75,
+                        line=dict(color=BG, width=1.5)),
+            hovertemplate="<b>%{text}</b><br>Chamados: %{x}<br>FCR: %{y:.1f}%<extra></extra>",
+        )
+        fig_q.add_annotation(x=max_t*0.97, y=100, text="⭐ Alta Eficiência",
+                              showarrow=False, font=dict(size=9, color=GREEN), xanchor="right")
+        fig_q.add_annotation(x=max_t*0.03, y=100, text="🧘 Baixo Volume / Boa FCR",
+                              showarrow=False, font=dict(size=9, color=TEAL), xanchor="left")
+        fig_q.add_annotation(x=max_t*0.97, y=med_f*0.15, text="🔥 Alto Volume / FCR Baixa",
+                              showarrow=False, font=dict(size=9, color=ORANGE), xanchor="right")
+        fig_q.add_annotation(x=max_t*0.03, y=med_f*0.15, text="⚠️ Atenção",
+                              showarrow=False, font=dict(size=9, color=DANGER), xanchor="left")
+        fig_q.update_layout(**pb(320,
+            xaxis=dict(title="Total de Chamados", showgrid=False, color=MUTED),
+            yaxis=dict(title="FCR %", showgrid=False, color=MUTED, range=[0, 108]),
+        ))
+        st.plotly_chart(fig_q, use_container_width=True)
+        st.markdown(chart_close(), unsafe_allow_html=True)
+
+    with col_hm:
+        st.markdown(chart_open("🧩 Mapa de Calor — Atendente × Módulo"), unsafe_allow_html=True)
+        top6m = df["Modulo"].value_counts().nlargest(6).index
+        df_hm = df.copy()
+        df_hm["Mod_x"] = df_hm["Modulo"].apply(lambda x: x if x in top6m else "Outros")
+        piv = df_hm.groupby(["Atendente","Mod_x"]).size().reset_index(name="Qtd") \
+                   .pivot(index="Atendente", columns="Mod_x", values="Qtd").fillna(0)
+        fig_hm = px.imshow(piv, text_auto=True, aspect="auto",
+                            color_continuous_scale=[[0,CARD2],[0.5,CARD],[1,BRAND]])
+        fig_hm.update_coloraxes(showscale=False)
+        fig_hm.update_layout(**pb(max(300, piv.shape[0]*38), xaxis_title="", yaxis_title=""))
+        fig_hm.update_traces(textfont=dict(color=WHITE))
+        st.plotly_chart(fig_hm, use_container_width=True)
+        st.markdown(chart_close(), unsafe_allow_html=True)
+
+    # Gauges de FCR
+    st.markdown('<span class="sec-t">⚡ Resolução no Primeiro Contato (FCR) — por Atendente</span>', unsafe_allow_html=True)
+    df_fcr_g = df_at.sort_values("FCR_pct", ascending=False)
+    n = min(len(df_fcr_g), 6)
+    cols_g = st.columns(n)
+    for i, (_, row) in enumerate(df_fcr_g.head(n).iterrows()):
+        cor = GREEN if row["FCR_pct"] >= 70 else (GOLD if row["FCR_pct"] >= 50 else DANGER)
         fig_g = go.Figure(go.Indicator(
             mode="gauge+number",
-            value=row["FCR_Pct"],
+            value=row["FCR_pct"],
             number=dict(suffix="%", font=dict(size=18, color=cor)),
-            title=dict(text=row["Atendente"].split()[0], font=dict(size=10, color=GRAY1)),
+            title=dict(text=row["Atendente"].split()[0], font=dict(size=10, color=MUTED)),
             gauge=dict(
                 axis=dict(range=[0,100], tickwidth=0, tickcolor="transparent"),
                 bar=dict(color=cor, thickness=0.22),
-                bgcolor=GRAY3, borderwidth=0,
-                steps=[dict(range=[0,70], color=GRAY3), dict(range=[70,100], color="#D4F1EB")],
+                bgcolor=CARD2, borderwidth=0,
+                steps=[dict(range=[0,70], color=CARD2), dict(range=[70,100], color="rgba(0,184,148,0.15)")],
                 threshold=dict(line=dict(color=GREEN, width=2), thickness=0.75, value=70),
             ),
         ))
-        fig_g.update_layout(paper_bgcolor="rgba(0,0,0,0)", margin=dict(t=30, b=10, l=10, r=10), height=160)
-        colunas_gauge[i].plotly_chart(fig_g, use_container_width=True)
-    st.markdown(card_close(), unsafe_allow_html=True)
+        fig_g.update_layout(paper_bgcolor="rgba(0,0,0,0)", margin=dict(t=30, b=5, l=10, r=10), height=160)
+        cols_g[i].plotly_chart(fig_g, use_container_width=True)
 
 
-# ═══════════════════════════════════════════════════════════════════════════════
-# PÁGINA 3 — SITUAÇÃO DOS CHAMADOS
-# ═══════════════════════════════════════════════════════════════════════════════
-def pagina_situacao(df):
-    st.markdown('<span class="sec-title">🎫 Pipeline e Situação dos Chamados</span>', unsafe_allow_html=True)
-
+# ══════════════════════════════════════════════════════════════════════════════
+#  ABA 4 — SITUAÇÃO DOS CHAMADOS
+# ══════════════════════════════════════════════════════════════════════════════
+def aba_situacao(df):
     col_f, col_tipo, col_mot = st.columns([1, 1, 2])
 
     with col_f:
-        st.markdown(card_open("📊 Funil — Situações"), unsafe_allow_html=True)
+        st.markdown(chart_open("🔀 Funil — Situações"), unsafe_allow_html=True)
         df_sit = df.groupby("Situacao").size().reset_index(name="Qtd").sort_values("Qtd", ascending=False)
-        fig_fun = go.Figure(go.Funnel(
+        fig_f = go.Figure(go.Funnel(
             y=df_sit["Situacao"], x=df_sit["Qtd"],
             textposition="inside", textinfo="value+percent initial",
             marker=dict(color=CORES[:len(df_sit)]),
         ))
-        fig_fun.update_layout(**plotly_base(320))
-        st.plotly_chart(fig_fun, use_container_width=True)
-        st.markdown(card_close(), unsafe_allow_html=True)
+        fig_f.update_layout(**pb(300))
+        st.plotly_chart(fig_f, use_container_width=True)
+        st.markdown(chart_close(), unsafe_allow_html=True)
 
     with col_tipo:
-        st.markdown(card_open("📁 Tipo de Chamado"), unsafe_allow_html=True)
-        df_tipo = df.groupby("Tipo").size().reset_index(name="Qtd")
-        fig_tipo = px.pie(df_tipo, names="Tipo", values="Qtd", hole=0.52,
-                          color_discrete_sequence=CORES)
-        fig_tipo.update_traces(textposition="inside", textinfo="percent+label",
-                                textfont_size=11)
-        fig_tipo.update_layout(**plotly_base(320, showlegend=False))
-        st.plotly_chart(fig_tipo, use_container_width=True)
-        st.markdown(card_close(), unsafe_allow_html=True)
+        st.markdown(chart_open("📁 Tipo de Chamado"), unsafe_allow_html=True)
+        df_tp = df.groupby("Tipo").size().reset_index(name="Qtd")
+        fig_tp = px.pie(df_tp, names="Tipo", values="Qtd", hole=0.55,
+                         color_discrete_sequence=CORES)
+        fig_tp.update_traces(textposition="inside", textinfo="percent+label",
+                              textfont=dict(size=11, color=WHITE))
+        fig_tp.update_layout(**pb(300, showlegend=False))
+        st.plotly_chart(fig_tp, use_container_width=True)
+        st.markdown(chart_close(), unsafe_allow_html=True)
 
     with col_mot:
-        st.markdown(card_open("🎯 Treemap — Motivos por Volume"), unsafe_allow_html=True)
-        df_mot = df.groupby("Motivo").size().reset_index(name="Qtd").nlargest(20, "Qtd")
-        fig_tree_mot = px.treemap(df_mot, path=["Motivo"], values="Qtd",
-                                   color="Qtd",
-                                   color_continuous_scale=[[0, GRAY3],[0.5,"#FFB3B3"],[1, RED]])
-        fig_tree_mot.update_coloraxes(showscale=False)
-        fig_tree_mot.update_traces(textfont_size=12)
-        fig_tree_mot.update_layout(**plotly_base(320))
-        st.plotly_chart(fig_tree_mot, use_container_width=True)
-        st.markdown(card_close(), unsafe_allow_html=True)
+        st.markdown(chart_open("📈 Tendência de Situações — Mensal"), unsafe_allow_html=True)
+        df_ts = df.copy()
+        df_ts["MesAno"] = df_ts["Data_abertura"].dt.to_period("M").astype(str)
+        top_s = df_ts["Situacao"].value_counts().nlargest(5).index
+        df_ts["Sit_f"] = df_ts["Situacao"].apply(lambda x: x if x in top_s else "Outras")
+        df_tsg = df_ts.groupby(["MesAno","Sit_f"]).size().reset_index(name="Qtd").sort_values("MesAno")
+        fig_ts = px.area(df_tsg, x="MesAno", y="Qtd", color="Sit_f",
+                          color_discrete_sequence=CORES)
+        fig_ts.update_layout(**pb(300, xaxis_title="", yaxis_title="",
+                                   xaxis=dict(showgrid=False, color=MUTED),
+                                   yaxis=dict(showgrid=True, gridcolor=BORDER, color=MUTED),
+                                   legend=dict(orientation="h", y=1.12, x=0, title="",
+                                               font=dict(color=WHITE))))
+        st.plotly_chart(fig_ts, use_container_width=True)
+        st.markdown(chart_close(), unsafe_allow_html=True)
 
-    # Tendência de situações ao longo do tempo
-    st.markdown(card_open("📈 Tendência de Situações — Mensal"), unsafe_allow_html=True)
-    df_tend_sit = df.copy()
-    df_tend_sit["MesAno"] = df_tend_sit["Data_abertura"].dt.to_period("M").astype(str)
-    top_sits = df_tend_sit["Situacao"].value_counts().nlargest(5).index
-    df_tend_sit["Situacao_f"] = df_tend_sit["Situacao"].apply(lambda x: x if x in top_sits else "Outras")
-    df_ts = df_tend_sit.groupby(["MesAno","Situacao_f"]).size().reset_index(name="Qtd").sort_values("MesAno")
-    fig_ts = px.area(df_ts, x="MesAno", y="Qtd", color="Situacao_f",
-                     color_discrete_sequence=CORES, markers=False)
-    fig_ts.update_layout(**plotly_base(250, xaxis_title="", yaxis_title="",
-                                        legend=dict(orientation="h", y=1.12, x=0, title="")))
-    st.plotly_chart(fig_ts, use_container_width=True)
-    st.markdown(card_close(), unsafe_allow_html=True)
-
-    # Backlog aging: estimativa de chamados abertos por tempo
-    df_backlog = df[df["Data_Solucao"].isna()].copy()
-    if not df_backlog.empty:
+    # Backlog aging
+    df_bl = df[df["Data_Solucao"].isna()].copy()
+    if not df_bl.empty:
         hoje = date.today()
-        df_backlog["Dias_Aberto"] = (pd.Timestamp(hoje) - df_backlog["Data_abertura"]).dt.days.clip(lower=0)
-        df_backlog["Faixa"] = pd.cut(df_backlog["Dias_Aberto"],
-                                      bins=[-1, 3, 7, 15, 30, 60, 9999],
-                                      labels=["0-3d","4-7d","8-15d","16-30d","31-60d","60d+"])
-        df_aging = df_backlog.groupby("Faixa", observed=True).size().reset_index(name="Qtd")
+        df_bl["Dias"] = (pd.Timestamp(hoje) - df_bl["Data_abertura"]).dt.days.clip(lower=0)
+        df_bl["Faixa"] = pd.cut(df_bl["Dias"],
+                                  bins=[-1, 3, 7, 15, 30, 60, 9999],
+                                  labels=["0–3 dias","4–7 dias","8–15 dias","16–30 dias","31–60 dias","60+ dias"])
+        df_ag = df_bl.groupby("Faixa", observed=True).size().reset_index(name="Qtd")
 
-        st.markdown(card_open("⏳ Backlog Aging — Chamados Em Aberto por Faixa de Tempo"), unsafe_allow_html=True)
-        cores_aging = [GREEN, GOLD, ORANGE, RED, "#8E1010", "#5D0000"]
-        fig_aging = px.bar(df_aging, x="Faixa", y="Qtd", text="Qtd",
-                            color="Faixa",
-                            color_discrete_sequence=cores_aging)
-        fig_aging.update_traces(textposition="outside", cliponaxis=False, showlegend=False)
-        fig_aging.update_layout(**plotly_base(230, xaxis_title="Tempo em aberto", yaxis_title="Qtd"))
-        st.plotly_chart(fig_aging, use_container_width=True)
-        st.markdown(card_close(), unsafe_allow_html=True)
+        col_ag, col_at_sit = st.columns([2, 3])
+        with col_ag:
+            st.markdown(chart_open(f"⏳ {tip('Backlog', 'Fila de pendências: chamados ainda sem solução')} — Tempo em Aberto (Faixas)"), unsafe_allow_html=True)
+            cores_ag = [GREEN, TEAL, GOLD, ORANGE, DANGER, "#8E1010"]
+            fig_ag = px.bar(df_ag, x="Faixa", y="Qtd", text="Qtd",
+                             color="Faixa", color_discrete_sequence=cores_ag)
+            fig_ag.update_traces(textposition="outside", cliponaxis=False,
+                                  textfont=dict(color=WHITE), showlegend=False)
+            fig_ag.update_layout(**pb(260, xaxis_title="", yaxis_title="",
+                                       xaxis=dict(showgrid=False, color=MUTED),
+                                       yaxis=dict(showgrid=True, gridcolor=BORDER, color=MUTED)))
+            st.plotly_chart(fig_ag, use_container_width=True)
+            st.markdown(chart_close(), unsafe_allow_html=True)
 
-
-# ═══════════════════════════════════════════════════════════════════════════════
-# PÁGINA 4 — CLIENTES & CONTATOS
-# ═══════════════════════════════════════════════════════════════════════════════
-def pagina_clientes(df):
-    st.markdown('<span class="sec-title">🏢 Análise de Clientes</span>', unsafe_allow_html=True)
-
-    tab_top, col_raiox = st.tabs(["🏆 Top Clientes", "🔍 Raio-X do Cliente"])
-
-    with tab_top:
-        col_t1, col_t2 = st.columns([3, 2])
-
-        with col_t1:
-            st.markdown(card_open("📦 Treemap — Top Clientes por Volume"), unsafe_allow_html=True)
-            df_cli = df.groupby("Cliente").size().reset_index(name="Qtd").nlargest(25, "Qtd")
-            fig_tree = px.treemap(df_cli, path=["Cliente"], values="Qtd",
-                                   color="Qtd",
-                                   color_continuous_scale=[[0, GRAY3],[0.4,"#FFB3B3"],[1, RED]])
-            fig_tree.update_coloraxes(showscale=False)
-            fig_tree.update_traces(textfont_size=11)
-            fig_tree.update_layout(**plotly_base(340))
-            st.plotly_chart(fig_tree, use_container_width=True)
-            st.markdown(card_close(), unsafe_allow_html=True)
-
-        with col_t2:
-            st.markdown(card_open("🏆 Ranking Top 15 Clientes"), unsafe_allow_html=True)
-            df_rank_cli = df.groupby("Cliente").size().reset_index(name="Total").sort_values("Total", ascending=False).head(15)
-            html_r = ranking_html(df_rank_cli, "Cliente", "Total", RED)
-            st.markdown(html_r, unsafe_allow_html=True)
-            st.markdown(card_close(), unsafe_allow_html=True)
-
-        st.markdown(card_open("🌐 Sunburst — Cliente → Módulo → Situação (Top 10 Clientes)"), unsafe_allow_html=True)
-        top10_cli = df.groupby("Cliente").size().nlargest(10).index
-        df_sun_cli = df[df["Cliente"].isin(top10_cli)].copy()
-        top5_mod = df_sun_cli["Modulo"].value_counts().nlargest(5).index
-        df_sun_cli["Modulo_s"] = df_sun_cli["Modulo"].apply(lambda x: x if x in top5_mod else "Outros")
-        df_sun_g = df_sun_cli.groupby(["Cliente","Modulo_s","Situacao"]).size().reset_index(name="Qtd")
-
-        fig_sun_cli = px.sunburst(df_sun_g, path=["Cliente","Modulo_s","Situacao"],
-                                   values="Qtd", color_discrete_sequence=CORES)
-        fig_sun_cli.update_layout(**plotly_base(400))
-        fig_sun_cli.update_traces(textfont_size=10)
-        st.plotly_chart(fig_sun_cli, use_container_width=True)
-        st.markdown(card_close(), unsafe_allow_html=True)
-
-    with col_raiox:
-        st.markdown(card_open("🔍 Raio-X do Cliente"), unsafe_allow_html=True)
-        clientes_lista = sorted(df["Cliente"].dropna().unique())
-        cliente_sel = st.selectbox("Selecione o Cliente:", clientes_lista,
-                                    index=0 if clientes_lista else None,
-                                    label_visibility="collapsed")
-        if cliente_sel:
-            df_ce = df[df["Cliente"] == cliente_sel]
-            total_ce = len(df_ce)
-            fcr_ce = df_ce["Finalizado_Mesmo_Dia"].sum() / total_ce * 100 if total_ce > 0 else 0
-            abertos_ce = df_ce["Data_Solucao"].isna().sum()
-
-            st.markdown(f"""
-            <div style="display:flex;gap:12px;margin-bottom:12px">
-              <div class="kpi-card" style="flex:1">
-                <div class="kpi-top-bar" style="background:{RED}"></div>
-                <div class="kpi-label">Total Chamados</div>
-                <div class="kpi-val">{total_ce:,}</div>
-              </div>
-              <div class="kpi-card" style="flex:1">
-                <div class="kpi-top-bar" style="background:{GOLD}"></div>
-                <div class="kpi-label">FCR %</div>
-                <div class="kpi-val">{fcr_ce:.1f}%</div>
-              </div>
-              <div class="kpi-card" style="flex:1">
-                <div class="kpi-top-bar" style="background:{ORANGE}"></div>
-                <div class="kpi-label">Em Aberto</div>
-                <div class="kpi-val">{abertos_ce:,}</div>
-              </div>
-            </div>
-            """, unsafe_allow_html=True)
-
-            col_r1, col_r2 = st.columns(2)
-            with col_r1:
-                st.markdown("**Top Contatos**")
-                df_cont = df_ce.groupby("Contato").size().reset_index(name="Qtd").nlargest(10,"Qtd").sort_values("Qtd")
-                fig_cont = px.bar(df_cont, y="Contato", x="Qtd", orientation="h", text="Qtd")
-                fig_cont.update_traces(marker_color=DARK, textposition="outside", cliponaxis=False)
-                fig_cont.update_layout(**plotly_base(260, xaxis_title="", yaxis_title=""))
-                st.plotly_chart(fig_cont, use_container_width=True)
-
-            with col_r2:
-                st.markdown("**Módulos Demandados**")
-                df_mod_ce = df_ce.groupby("Modulo").size().reset_index(name="Qtd").nlargest(10,"Qtd").sort_values("Qtd")
-                fig_mod_ce = px.bar(df_mod_ce, y="Modulo", x="Qtd", orientation="h", text="Qtd")
-                fig_mod_ce.update_traces(marker_color=RED, textposition="outside", cliponaxis=False)
-                fig_mod_ce.update_layout(**plotly_base(260, xaxis_title="", yaxis_title=""))
-                st.plotly_chart(fig_mod_ce, use_container_width=True)
-
-            st.markdown("**Origem dos Contatos**")
-            df_orig_ce = df_ce.groupby("Origem").size().reset_index(name="Qtd")
-            fig_orig_ce = px.pie(df_orig_ce, names="Origem", values="Qtd", hole=0.5,
-                                  color_discrete_sequence=CORES)
-            fig_orig_ce.update_traces(textposition="inside", textinfo="percent+label")
-            fig_orig_ce.update_layout(**plotly_base(200, showlegend=False))
-            st.plotly_chart(fig_orig_ce, use_container_width=True)
-
-        st.markdown(card_close(), unsafe_allow_html=True)
-
-    # Top contatos globais
-    st.markdown('<span class="sec-title">🗣️ Top Contatos Globais</span>', unsafe_allow_html=True)
-    col_cont1, col_cont2 = st.columns([2, 3])
-    with col_cont1:
-        st.markdown(card_open("🏆 Top 15 Contatos que Mais Acionaram o Suporte"), unsafe_allow_html=True)
-        df_rank_cont = df.groupby("Contato").size().reset_index(name="Total").sort_values("Total", ascending=False).head(15)
-        html_rc = ranking_html(df_rank_cont, "Contato", "Total", BLUE)
-        st.markdown(html_rc, unsafe_allow_html=True)
-        st.markdown(card_close(), unsafe_allow_html=True)
-
-    with col_cont2:
-        st.markdown(card_open("🔥 Treemap — Contatos por Volume de Chamados"), unsafe_allow_html=True)
-        df_cont_tree = df.groupby(["Cliente","Contato"]).size().reset_index(name="Qtd").nlargest(30, "Qtd")
-        fig_cont_tree = px.treemap(df_cont_tree, path=["Cliente","Contato"], values="Qtd",
-                                    color="Qtd",
-                                    color_continuous_scale=[[0, GRAY3],[0.4,"#B3D4FF"],[1, BLUE]])
-        fig_cont_tree.update_coloraxes(showscale=False)
-        fig_cont_tree.update_traces(textfont_size=10)
-        fig_cont_tree.update_layout(**plotly_base(340))
-        st.plotly_chart(fig_cont_tree, use_container_width=True)
-        st.markdown(card_close(), unsafe_allow_html=True)
+        with col_at_sit:
+            st.markdown(chart_open("✅ Resolvidos vs 📌 Em Aberto — por Atendente"), unsafe_allow_html=True)
+            df_ra = df.copy()
+            df_ra["Status"] = df_ra["Data_Solucao"].apply(lambda x: "Resolvido" if pd.notna(x) else "Em Aberto")
+            df_rag = df_ra.groupby(["Atendente","Status"]).size().reset_index(name="Qtd")
+            n_at = df["Atendente"].nunique()
+            fig_ra = px.bar(df_rag, y="Atendente", x="Qtd", color="Status",
+                             orientation="h", barmode="stack", text="Qtd",
+                             color_discrete_map={"Resolvido": GREEN, "Em Aberto": DANGER})
+            fig_ra.update_traces(textposition="inside", textfont=dict(size=9, color=WHITE),
+                                  cliponaxis=False)
+            fig_ra.update_layout(**pb(max(260, n_at*34),
+                yaxis_title="", xaxis_title="",
+                xaxis=dict(showgrid=False), yaxis=dict(showgrid=False),
+                legend=dict(orientation="h", y=1.1, x=0, title="", font=dict(color=WHITE))))
+            st.plotly_chart(fig_ra, use_container_width=True)
+            st.markdown(chart_close(), unsafe_allow_html=True)
 
 
-# ═══════════════════════════════════════════════════════════════════════════════
-# PÁGINA 5 — MÓDULOS & ORIGENS
-# ═══════════════════════════════════════════════════════════════════════════════
-def pagina_modulos(df):
-    st.markdown('<span class="sec-title">🧩 Módulos & Canais de Entrada</span>', unsafe_allow_html=True)
+# ══════════════════════════════════════════════════════════════════════════════
+#  ABA 5 — SLA & KPIs
+# ══════════════════════════════════════════════════════════════════════════════
+def aba_sla(df):
+    st.markdown(f"""
+    <div class="chart-card" style="margin-bottom:14px">
+      <div class="chart-title">
+        ℹ️ Sobre os indicadores desta aba
+      </div>
+      <div style="font-size:0.8rem;color:{MUTED};line-height:1.7">
+        <b style="color:{WHITE}">• {tip('FCR', 'First Contact Resolution — Resolução no Primeiro Contato')}</b>: % de chamados finalizados sem retorno do cliente. <b>Meta recomendada: ≥ 70%</b><br>
+        <b style="color:{WHITE}">• {tip('TMR', 'Tempo Médio de Resolução')}</b>: tempo médio entre abertura e fechamento. Quanto menor, melhor.<br>
+        <b style="color:{WHITE}">• {tip('SLA', 'Service Level Agreement — Acordo de Nível de Serviço')}</b>: compromisso de prazo entre empresa e cliente para resolução dos chamados.<br>
+        <b style="color:{WHITE}">• Taxa de Encerramento</b>: % de chamados resolvidos no período filtrado.<br>
+        <b style="color:{WHITE}">• Sazonalidade</b>: variação do volume por módulo ao longo dos meses do ano.
+      </div>
+    </div>
+    """, unsafe_allow_html=True)
 
-    col_tree, col_orig = st.columns([3, 2])
+    col_fcr_m, col_tmr_at = st.columns(2)
 
-    with col_tree:
-        st.markdown(card_open("🧩 Treemap — Módulos por Demanda"), unsafe_allow_html=True)
-        df_mod = df.groupby("Modulo").size().reset_index(name="Qtd").sort_values("Qtd", ascending=False)
-        fig_tree_m = px.treemap(df_mod, path=["Modulo"], values="Qtd",
-                                 color="Qtd",
-                                 color_continuous_scale=[[0, GRAY3],[0.4,"#FFB3B3"],[1, RED]])
-        fig_tree_m.update_coloraxes(showscale=False)
-        fig_tree_m.update_traces(textfont_size=11)
-        fig_tree_m.update_layout(**plotly_base(340))
-        st.plotly_chart(fig_tree_m, use_container_width=True)
-        st.markdown(card_close(), unsafe_allow_html=True)
+    with col_fcr_m:
+        st.markdown(chart_open(f"⚡ Evolução Mensal do {tip('FCR%', 'Resolução no Primeiro Contato — meta: 70%')}"), unsafe_allow_html=True)
+        df_fm = df.copy()
+        df_fm["MesAno"] = df_fm["Data_abertura"].dt.to_period("M").astype(str)
+        df_fm = df_fm.groupby("MesAno").agg(Total=("Sac","count"), FCR=("Finalizado_Mesmo_Dia","sum")).reset_index()
+        df_fm["FCR_pct"] = (df_fm["FCR"] / df_fm["Total"] * 100).round(1)
+        df_fm = df_fm.sort_values("MesAno")
 
-    with col_orig:
-        st.markdown(card_open("📡 Origem dos Contatos"), unsafe_allow_html=True)
-        df_or = df.groupby("Origem").size().reset_index(name="Qtd").sort_values("Qtd", ascending=False)
-        fig_or = px.pie(df_or, names="Origem", values="Qtd", hole=0.55,
-                         color_discrete_sequence=CORES)
-        fig_or.update_traces(textposition="outside", textinfo="label+percent",
-                              textfont_size=11, pull=[0.05]*len(df_or))
-        fig_or.update_layout(**plotly_base(340, showlegend=False))
-        st.plotly_chart(fig_or, use_container_width=True)
-        st.markdown(card_close(), unsafe_allow_html=True)
+        fig_fm = go.Figure()
+        fig_fm.add_bar(x=df_fm["MesAno"], y=df_fm["Total"],
+                        marker_color=CARD2, name="Total Chamados", yaxis="y")
+        fig_fm.add_scatter(x=df_fm["MesAno"], y=df_fm["FCR_pct"],
+                            mode="lines+markers+text", name="FCR %",
+                            line=dict(color=GOLD, width=2.5), marker=dict(size=6),
+                            text=df_fm["FCR_pct"].astype(str)+"%",
+                            textposition="top center", textfont=dict(size=9, color=GOLD),
+                            yaxis="y2")
+        fig_fm.add_hline(y=70, line_dash="dash", line_color=GREEN, opacity=0.5,
+                          annotation_text="Meta 70%", annotation_font_color=GREEN,
+                          yref="y2")
+        fig_fm.update_layout(**pb(260,
+            xaxis=dict(showgrid=False, color=MUTED),
+            yaxis=dict(title="Chamados", showgrid=True, gridcolor=BORDER, color=MUTED),
+            yaxis2=dict(title="FCR %", overlaying="y", side="right",
+                        range=[0,110], showgrid=False, color=MUTED, ticksuffix="%"),
+            legend=dict(orientation="h", y=1.12, x=0, font=dict(color=WHITE))))
+        st.plotly_chart(fig_fm, use_container_width=True)
+        st.markdown(chart_close(), unsafe_allow_html=True)
 
-    # Sankey: Origem → Módulo → Situação
-    st.markdown(card_open("🔀 Fluxo Sankey — Origem → Módulo → Situação"), unsafe_allow_html=True)
-    try:
-        top5_orig = df["Origem"].value_counts().nlargest(5).index.tolist()
-        top5_mod  = df["Modulo"].value_counts().nlargest(5).index.tolist()
-        top5_sit  = df["Situacao"].value_counts().nlargest(4).index.tolist()
+    with col_tmr_at:
+        st.markdown(chart_open(f"⏱️ {tip('TMR', 'Tempo Médio de Resolução — calculado a partir da data de abertura até a data de solução')} por Atendente"), unsafe_allow_html=True)
+        df_tmr = df[df["TMR_h"] > 0].groupby("Atendente")["TMR_h"].mean().reset_index()
+        df_tmr.columns = ["Atendente", "TMR_h"]
+        df_tmr["TMR_dias"] = (df_tmr["TMR_h"] / 24).round(2)
+        df_tmr = df_tmr.sort_values("TMR_dias")
+        df_tmr["cor"] = df_tmr["TMR_dias"].apply(lambda x: GREEN if x <= 2 else (GOLD if x <= 5 else DANGER))
 
-        df_sk = df[
-            df["Origem"].isin(top5_orig) &
-            df["Modulo"].isin(top5_mod) &
-            df["Situacao"].isin(top5_sit)
-        ].copy()
+        fig_tmr = go.Figure()
+        for _, r in df_tmr.iterrows():
+            fig_tmr.add_bar(x=[r["TMR_dias"]], y=[r["Atendente"]],
+                             orientation="h", marker_color=r["cor"],
+                             showlegend=False,
+                             text=[f"{r['TMR_dias']:.1f}d"], textposition="outside",
+                             textfont=dict(color=WHITE))
+        fig_tmr.update_layout(**pb(max(260, len(df_tmr)*34),
+            xaxis=dict(title="Dias", showgrid=False, color=MUTED),
+            yaxis=dict(showgrid=False, color=MUTED),
+            yaxis_title="", bargap=0.3))
+        st.plotly_chart(fig_tmr, use_container_width=True)
+        st.markdown(chart_close(), unsafe_allow_html=True)
 
-        all_nodes = top5_orig + top5_mod + top5_sit
-        node_idx  = {n: i for i, n in enumerate(all_nodes)}
-
-        links_om = df_sk.groupby(["Origem","Modulo"]).size().reset_index(name="v")
-        links_ms = df_sk.groupby(["Modulo","Situacao"]).size().reset_index(name="v")
-
-        src, tgt, val = [], [], []
-        for _, r in links_om.iterrows():
-            if r["Origem"] in node_idx and r["Modulo"] in node_idx:
-                src.append(node_idx[r["Origem"]])
-                tgt.append(node_idx[r["Modulo"]])
-                val.append(r["v"])
-        for _, r in links_ms.iterrows():
-            if r["Modulo"] in node_idx and r["Situacao"] in node_idx:
-                src.append(node_idx[r["Modulo"]])
-                tgt.append(node_idx[r["Situacao"]])
-                val.append(r["v"])
-
-        node_colors = (
-            [BLUE]*len(top5_orig) +
-            [RED]*len(top5_mod) +
-            [GREEN]*len(top5_sit)
-        )
-
-        fig_sk = go.Figure(go.Sankey(
-            node=dict(
-                pad=18, thickness=18,
-                line=dict(color=WHITE, width=0.5),
-                label=all_nodes, color=node_colors,
-            ),
-            link=dict(source=src, target=tgt, value=val, color="rgba(180,180,180,0.3)"),
-        ))
-        fig_sk.update_layout(**plotly_base(360))
-        st.plotly_chart(fig_sk, use_container_width=True)
-    except Exception as e:
-        st.caption(f"Sankey indisponível: {e}")
-    st.markdown(card_close(), unsafe_allow_html=True)
-
-    # Heatmap Módulo × Mês (Sazonalidade)
-    st.markdown(card_open("🌡️ Sazonalidade — Módulo × Mês do Ano"), unsafe_allow_html=True)
+    # Sazonalidade
+    st.markdown(chart_open(f"🌡️ Sazonalidade — {tip('Módulo', 'Módulo do ERP ao qual o chamado está associado')} × Mês do Ano"), unsafe_allow_html=True)
     meses_pt = {1:"Jan",2:"Fev",3:"Mar",4:"Abr",5:"Mai",6:"Jun",
                 7:"Jul",8:"Ago",9:"Set",10:"Out",11:"Nov",12:"Dez"}
     df_saz = df.copy()
     df_saz["MesN"] = df_saz["Data_abertura"].dt.month
-    df_saz["Mes_label"] = df_saz["MesN"].map(meses_pt)
-    top8_mod = df_saz["Modulo"].value_counts().nlargest(8).index
-    df_saz_f = df_saz[df_saz["Modulo"].isin(top8_mod)]
-    df_saz_g = df_saz_f.groupby(["Modulo","Mes_label"]).size().reset_index(name="Qtd")
-    df_piv_saz = df_saz_g.pivot(index="Modulo", columns="Mes_label", values="Qtd").fillna(0)
-    col_order = [m for m in list(meses_pt.values()) if m in df_piv_saz.columns]
-    df_piv_saz = df_piv_saz[col_order]
-
-    fig_saz = px.imshow(df_piv_saz, text_auto=True, aspect="auto",
-                         color_continuous_scale=[[0, GRAY3],[0.5,"#FFD3B3"],[1, ORANGE]])
+    df_saz["Mes"] = df_saz["MesN"].map(meses_pt)
+    top8m = df_saz["Modulo"].value_counts().nlargest(8).index
+    df_saz = df_saz[df_saz["Modulo"].isin(top8m)]
+    piv_s = df_saz.groupby(["Modulo","Mes"]).size().reset_index(name="Qtd") \
+                   .pivot(index="Modulo", columns="Mes", values="Qtd").fillna(0)
+    col_ord = [m for m in list(meses_pt.values()) if m in piv_s.columns]
+    piv_s = piv_s[col_ord]
+    fig_saz = px.imshow(piv_s, text_auto=True, aspect="auto",
+                         color_continuous_scale=[[0, CARD2],[0.5, ORANGE],[1, BRAND]])
     fig_saz.update_coloraxes(showscale=False)
-    fig_saz.update_layout(**plotly_base(max(280, len(top8_mod)*40),
-                                         xaxis_title="", yaxis_title=""))
+    fig_saz.update_traces(textfont=dict(color=WHITE))
+    fig_saz.update_layout(**pb(max(280, len(top8m)*40), xaxis_title="", yaxis_title=""))
     st.plotly_chart(fig_saz, use_container_width=True)
-    st.markdown(card_close(), unsafe_allow_html=True)
+    st.markdown(chart_close(), unsafe_allow_html=True)
+
+    # Comparativo ano a ano
+    col_ya, col_yf = st.columns(2)
+    df_ano = df.copy()
+    df_ano["Ano"] = df_ano["Ano_abertura"].astype(str)
+    df_ano_g = df_ano.groupby("Ano").agg(Total=("Sac","count"), FCR=("Finalizado_Mesmo_Dia","sum")).reset_index()
+    df_ano_g["FCR_pct"] = (df_ano_g["FCR"] / df_ano_g["Total"] * 100).round(1)
+
+    with col_ya:
+        st.markdown(chart_open("📆 Total de Chamados por Ano"), unsafe_allow_html=True)
+        fig_ya = px.bar(df_ano_g, x="Ano", y="Total", text="Total",
+                         color="Total", color_continuous_scale=[[0,CARD2],[1,TEAL]])
+        fig_ya.update_coloraxes(showscale=False)
+        fig_ya.update_traces(textposition="outside", cliponaxis=False, textfont=dict(color=WHITE))
+        fig_ya.update_layout(**pb(240, xaxis_title="", yaxis_title="",
+                                   xaxis=dict(showgrid=False, color=MUTED),
+                                   yaxis=dict(showgrid=True, gridcolor=BORDER, color=MUTED)))
+        st.plotly_chart(fig_ya, use_container_width=True)
+        st.markdown(chart_close(), unsafe_allow_html=True)
+
+    with col_yf:
+        st.markdown(chart_open(f"⚡ {tip('FCR%', 'Resolução no Primeiro Contato')} por Ano"), unsafe_allow_html=True)
+        fig_yf = go.Figure()
+        fig_yf.add_bar(x=df_ano_g["Ano"], y=df_ano_g["FCR_pct"],
+                        marker_color=[GREEN if v>=70 else ORANGE for v in df_ano_g["FCR_pct"]],
+                        text=df_ano_g["FCR_pct"].astype(str)+"%", textposition="outside",
+                        textfont=dict(color=WHITE))
+        fig_yf.add_hline(y=70, line_dash="dash", line_color=GREEN, opacity=0.5,
+                          annotation_text="Meta 70%", annotation_font_color=GREEN)
+        fig_yf.update_layout(**pb(240, xaxis_title="", yaxis_title="FCR %",
+                                   yaxis_range=[0,110],
+                                   xaxis=dict(showgrid=False, color=MUTED),
+                                   yaxis=dict(showgrid=True, gridcolor=BORDER, color=MUTED)))
+        st.plotly_chart(fig_yf, use_container_width=True)
+        st.markdown(chart_close(), unsafe_allow_html=True)
 
 
-# ═══════════════════════════════════════════════════════════════════════════════
-# MAIN
-# ═══════════════════════════════════════════════════════════════════════════════
+# ══════════════════════════════════════════════════════════════════════════════
+#  ABA 6 — ALERTAS & GESTÃO
+# ══════════════════════════════════════════════════════════════════════════════
+def aba_alertas(df, df_raw):
+    hoje = date.today()
+
+    # Chamados críticos em aberto
+    df_bl = df_raw[df_raw["Data_Solucao"].isna()].copy()
+    df_bl["Dias_Aberto"] = (pd.Timestamp(hoje) - df_bl["Data_abertura"]).dt.days.clip(lower=0)
+
+    criticos  = df_bl[df_bl["Dias_Aberto"] >= 30].sort_values("Dias_Aberto", ascending=False)
+    urgentes  = df_bl[(df_bl["Dias_Aberto"] >= 7) & (df_bl["Dias_Aberto"] < 30)].sort_values("Dias_Aberto", ascending=False)
+    recentes  = df_bl[df_bl["Dias_Aberto"] < 7]
+
+    col_m1, col_m2, col_m3, col_m4 = st.columns(4)
+    col_m1.markdown(f"""
+    <div class="kpi-card" style="border-left:4px solid {DANGER}">
+      <div class="kpi-label">🔴 Críticos (+30 dias)</div>
+      <div class="kpi-val" style="color:{DANGER}">{len(criticos):,}</div>
+      <div class="kpi-sub">chamados sem solução</div>
+    </div>""", unsafe_allow_html=True)
+    col_m2.markdown(f"""
+    <div class="kpi-card" style="border-left:4px solid {ORANGE}">
+      <div class="kpi-label">🟠 Urgentes (7–29 dias)</div>
+      <div class="kpi-val" style="color:{ORANGE}">{len(urgentes):,}</div>
+      <div class="kpi-sub">requerem atenção</div>
+    </div>""", unsafe_allow_html=True)
+    col_m3.markdown(f"""
+    <div class="kpi-card" style="border-left:4px solid {GOLD}">
+      <div class="kpi-label">🟡 Recentes (&lt;7 dias)</div>
+      <div class="kpi-val" style="color:{GOLD}">{len(recentes):,}</div>
+      <div class="kpi-sub">em acompanhamento</div>
+    </div>""", unsafe_allow_html=True)
+    col_m4.markdown(f"""
+    <div class="kpi-card" style="border-left:4px solid {TEAL}">
+      <div class="kpi-label">📋 Total em Aberto</div>
+      <div class="kpi-val" style="color:{TEAL}">{len(df_bl):,}</div>
+      <div class="kpi-sub">chamados pendentes</div>
+    </div>""", unsafe_allow_html=True)
+
+    st.markdown("<br>", unsafe_allow_html=True)
+
+    col_a, col_b = st.columns([3, 2])
+
+    with col_a:
+        st.markdown('<span class="sec-t">🔴 Chamados Críticos — Em Aberto há 30+ Dias</span>', unsafe_allow_html=True)
+        if not criticos.empty:
+            for _, r in criticos.head(10).iterrows():
+                dias = int(r["Dias_Aberto"])
+                cor_cls = "alert-card"
+                st.markdown(f"""
+                <div class="{cor_cls}">
+                  <div class="alert-title">
+                    🔴 #{r['Sac']} — {r['Cliente']}
+                    <span style="float:right;font-size:0.72rem;color:{DANGER};font-weight:700">{dias} dias em aberto</span>
+                  </div>
+                  <div class="alert-sub">
+                    👤 {r['Atendente']} &nbsp;·&nbsp; 📋 {r['Assunto']} &nbsp;·&nbsp; 🧩 {r['Modulo']}
+                  </div>
+                </div>
+                """, unsafe_allow_html=True)
+        else:
+            st.markdown(f'<div class="alert-card alert-info"><div class="alert-title">✅ Nenhum chamado crítico no momento!</div></div>', unsafe_allow_html=True)
+
+        st.markdown('<span class="sec-t">🟠 Chamados Urgentes — 7 a 29 Dias</span>', unsafe_allow_html=True)
+        if not urgentes.empty:
+            for _, r in urgentes.head(8).iterrows():
+                dias = int(r["Dias_Aberto"])
+                st.markdown(f"""
+                <div class="alert-card alert-warn">
+                  <div class="alert-title">
+                    🟠 #{r['Sac']} — {r['Cliente']}
+                    <span style="float:right;font-size:0.72rem;color:{GOLD};font-weight:700">{dias} dias</span>
+                  </div>
+                  <div class="alert-sub">
+                    👤 {r['Atendente']} &nbsp;·&nbsp; 📋 {r['Assunto']} &nbsp;·&nbsp; 🧩 {r['Modulo']}
+                  </div>
+                </div>
+                """, unsafe_allow_html=True)
+
+    with col_b:
+        st.markdown('<span class="sec-t">📊 Clientes com Maior Backlog</span>', unsafe_allow_html=True)
+        st.markdown(chart_open(""), unsafe_allow_html=True)
+        df_cli_bl = df_bl.groupby("Cliente").size().reset_index(name="Total").sort_values("Total", ascending=False).head(12)
+        st.markdown(ranking_html(df_cli_bl, "Cliente", "Total", DANGER), unsafe_allow_html=True)
+        st.markdown(chart_close(), unsafe_allow_html=True)
+
+        st.markdown('<span class="sec-t">⚠️ Atendentes com FCR Abaixo da Meta</span>', unsafe_allow_html=True)
+        df_fcr_al = df.groupby("Atendente").agg(Total=("Sac","count"), FCR=("Finalizado_Mesmo_Dia","sum")).reset_index()
+        df_fcr_al["FCR_pct"] = (df_fcr_al["FCR"] / df_fcr_al["Total"] * 100).round(1)
+        df_fcr_al = df_fcr_al[(df_fcr_al["FCR_pct"] < 70) & (df_fcr_al["Total"] > 5)].sort_values("FCR_pct")
+
+        if not df_fcr_al.empty:
+            for _, r in df_fcr_al.iterrows():
+                cor_b = DANGER if r["FCR_pct"] < 50 else ORANGE
+                st.markdown(f"""
+                <div class="alert-card alert-warn">
+                  <div class="alert-title">
+                    👤 {r['Atendente']}
+                    <span style="float:right;color:{cor_b};font-weight:700">{r['FCR_pct']:.0f}%</span>
+                  </div>
+                  <div class="alert-sub">{r['Total']:,} chamados · Meta: 70%</div>
+                </div>
+                """, unsafe_allow_html=True)
+        else:
+            st.markdown(f'<div class="alert-card alert-info"><div class="alert-title">✅ Todos acima da meta!</div></div>', unsafe_allow_html=True)
+
+    # Sankey origem → módulo → situação
+    st.markdown('<span class="sec-t">🔀 Fluxo dos Chamados — Origem → Módulo → Situação</span>', unsafe_allow_html=True)
+    st.markdown(chart_open(""), unsafe_allow_html=True)
+    try:
+        top5o = df["Origem"].value_counts().nlargest(5).index.tolist()
+        top5m = df["Modulo"].value_counts().nlargest(5).index.tolist()
+        top4s = df["Situacao"].value_counts().nlargest(4).index.tolist()
+        df_sk = df[df["Origem"].isin(top5o) & df["Modulo"].isin(top5m) & df["Situacao"].isin(top4s)]
+        all_nodes = top5o + top5m + top4s
+        nidx = {n: i for i, n in enumerate(all_nodes)}
+        src, tgt, val = [], [], []
+        for _, r in df_sk.groupby(["Origem","Modulo"]).size().reset_index(name="v").iterrows():
+            if r["Origem"] in nidx and r["Modulo"] in nidx:
+                src.append(nidx[r["Origem"]]); tgt.append(nidx[r["Modulo"]]); val.append(r["v"])
+        for _, r in df_sk.groupby(["Modulo","Situacao"]).size().reset_index(name="v").iterrows():
+            if r["Modulo"] in nidx and r["Situacao"] in nidx:
+                src.append(nidx[r["Modulo"]]); tgt.append(nidx[r["Situacao"]]); val.append(r["v"])
+        ncors = [TEAL]*len(top5o) + [BRAND]*len(top5m) + [GREEN]*len(top4s)
+        fig_sk = go.Figure(go.Sankey(
+            node=dict(pad=18, thickness=18, label=all_nodes, color=ncors,
+                      line=dict(color=BG, width=0.5)),
+            link=dict(source=src, target=tgt, value=val, color=f"rgba(139,163,191,0.2)"),
+        ))
+        fig_sk.update_layout(**pb(320))
+        st.plotly_chart(fig_sk, use_container_width=True)
+    except Exception as e:
+        st.caption(f"Diagrama de fluxo indisponível: {e}")
+    st.markdown(chart_close(), unsafe_allow_html=True)
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+#  MAIN
+# ══════════════════════════════════════════════════════════════════════════════
 def main():
     hoje = date.today()
 
     # ── HEADER ────────────────────────────────────────────────────────────────
-    col_logo1, col_title, col_logo2 = st.columns([1, 5, 1], vertical_alignment="center")
-    with col_logo1:
+    col_l1, col_tt, col_l2 = st.columns([1, 5, 1], vertical_alignment="center")
+    with col_l1:
         if os.path.exists("logo_supra.png"):
             st.image("logo_supra.png", width=110)
-    with col_title:
+    with col_tt:
         st.markdown(f"""
-        <div style="text-align:center;padding:6px 0">
-          <div style="font-size:1.25rem;font-weight:800;color:{DARK};letter-spacing:-0.3px">
-            Central de Inteligência de Suporte — SupraMAIS
+        <div style="text-align:center;padding:4px 0">
+          <div style="font-size:1.22rem;font-weight:800;color:{WHITE};letter-spacing:-0.3px">
+            Central de Suporte Técnico — SupraMAIS
           </div>
-          <div style="font-size:0.74rem;color:{GRAY1};margin-top:3px">
+          <div style="font-size:0.73rem;color:{MUTED};margin-top:3px">
             <span class="dot-live"></span>
-            Dados em tempo real &nbsp;·&nbsp; Atualizado em {datetime.now().strftime('%d/%m/%Y %H:%M')}
+            Dados em tempo real &nbsp;·&nbsp; Última atualização: {datetime.now().strftime('%d/%m/%Y às %H:%M')}
           </div>
         </div>
         """, unsafe_allow_html=True)
-    with col_logo2:
+    with col_l2:
         if os.path.exists("logo_supramais.png"):
             st.image("logo_supramais.png", width=60)
 
-    st.markdown(f"<hr style='margin:8px 0 14px;border:none;border-top:1px solid {GRAY3}'>",
-                unsafe_allow_html=True)
+    st.markdown(f"<hr>", unsafe_allow_html=True)
 
     # ── CARREGAR DADOS ────────────────────────────────────────────────────────
     try:
@@ -958,113 +1137,115 @@ def main():
     except Exception as e:
         st.error(f"❌ **Erro ao conectar ao banco.** Detalhe: `{e}`")
         st.stop()
-
     if df_raw.empty:
         st.warning("⚠️ Nenhum registro retornado.")
         st.stop()
 
-    # ── SIDEBAR ───────────────────────────────────────────────────────────────
-    with st.sidebar:
-        st.markdown(f"<div style='padding:8px 0 16px'><span style='font-size:1.1rem;font-weight:700'>🎯 BI Suporte</span></div>",
-                    unsafe_allow_html=True)
-        pagina = st.radio("Navegação", [
-            "📊 Painel Executivo",
-            "👥 Time de Suporte",
-            "🎫 Situação dos Chamados",
-            "🏢 Clientes & Contatos",
-            "🧩 Módulos & Origens",
-        ], label_visibility="collapsed")
+    # ── FILTROS VISÍVEIS ──────────────────────────────────────────────────────
+    st.markdown(f'<div class="chart-card" style="margin-bottom:14px">', unsafe_allow_html=True)
+    st.markdown(f'<div class="chart-title">🔍 Filtros Globais — aplicados em todas as abas</div>', unsafe_allow_html=True)
 
-        st.markdown(f"<hr style='border-color:rgba(255,255,255,0.12);margin:12px 0'>",
-                    unsafe_allow_html=True)
-        st.markdown("<span style='font-size:0.8rem;font-weight:700;opacity:0.7'>🔍 FILTROS</span>",
-                    unsafe_allow_html=True)
+    fc1, fc2, fc3, fc4, fc5, fc6 = st.columns([1.2, 1.2, 1.8, 1.8, 1.8, 0.8])
 
-        data_min = df_raw["Data_abertura"].dropna().min().date()
-        data_max = max(df_raw["Data_abertura"].dropna().max().date(), hoje)
+    data_min = df_raw["Data_abertura"].dropna().min().date()
+    data_max = max(df_raw["Data_abertura"].dropna().max().date(), hoje)
 
-        col_d1, col_d2 = st.columns(2)
-        di = col_d1.date_input("De", value=hoje-timedelta(days=30),
-                                min_value=data_min, max_value=data_max, format="DD/MM/YYYY")
-        df_ = col_d2.date_input("Até", value=hoje,
-                                  min_value=data_min, max_value=data_max, format="DD/MM/YYYY")
-
+    with fc1:
+        di = st.date_input("Data Inicial", value=hoje - timedelta(days=30),
+                            min_value=data_min, max_value=data_max, format="DD/MM/YYYY")
+    with fc2:
+        df_ = st.date_input("Data Final", value=hoje,
+                             min_value=data_min, max_value=data_max, format="DD/MM/YYYY")
+    with fc3:
         atendentes = sorted(df_raw["Atendente"].dropna().unique())
-        sel_at = st.multiselect("Atendente", atendentes, placeholder="Todos os atendentes")
-
+        sel_at = st.multiselect("Atendente", atendentes, placeholder="Todos")
+    with fc4:
         situacoes = sorted(df_raw["Situacao"].dropna().unique())
-        sel_sit = st.multiselect("Situação", situacoes, placeholder="Todas as situações")
-
+        sel_sit = st.multiselect("Situação", situacoes, placeholder="Todas")
+    with fc5:
         origens = sorted(df_raw["Origem"].dropna().unique())
-        sel_or = st.multiselect("Origem", origens, placeholder="Todas as origens")
-
-        st.markdown(f"<hr style='border-color:rgba(255,255,255,0.12);margin:12px 0'>",
-                    unsafe_allow_html=True)
-        if st.button("🔄 Atualizar Dados", use_container_width=True):
+        sel_or = st.multiselect("Origem / Canal", origens, placeholder="Todas")
+    with fc6:
+        st.markdown("<br>", unsafe_allow_html=True)
+        if st.button("🔄 Atualizar"):
             st.cache_data.clear()
             st.rerun()
 
-        # Aplicar filtros
-        df = df_raw.copy()
-        if di <= df_:
-            df = df[(df["Data_abertura"].dt.date >= di) & (df["Data_abertura"].dt.date <= df_)]
-        else:
-            st.error("Data inicial > data final")
-
-        if sel_at:  df = df[df["Atendente"].isin(sel_at)]
-        if sel_sit: df = df[df["Situacao"].isin(sel_sit)]
-        if sel_or:  df = df[df["Origem"].isin(sel_or)]
-
-        st.markdown(f"""
-        <div style="background:rgba(255,255,255,0.08);border-radius:10px;padding:10px 14px;margin-top:6px">
-          <div style="font-size:0.7rem;opacity:0.6;margin-bottom:2px">REGISTROS FILTRADOS</div>
-          <div style="font-size:1.4rem;font-weight:800;color:{WHITE}">{len(df):,}</div>
-        </div>
-        """, unsafe_allow_html=True)
-
-    # ── KPI STRIP ─────────────────────────────────────────────────────────────
-    mes_atual, ano_atual = hoje.month, hoje.year
-    df_mes  = df_raw[(df_raw["Mes_abertura"]==mes_atual)  & (df_raw["Ano_abertura"]==ano_atual)]
-    df_ano  = df_raw[df_raw["Ano_abertura"]==ano_atual]
-    df_m_ant_mes = mes_atual - 1 if mes_atual > 1 else 12
-    df_m_ant_ano = ano_atual if mes_atual > 1 else ano_atual - 1
-    df_mes_ant = df_raw[(df_raw["Mes_abertura"]==df_m_ant_mes) & (df_raw["Ano_abertura"]==df_m_ant_ano)]
-
-    hoje_q     = df_raw[df_raw["Data_abertura"].dt.date == hoje].shape[0]
-    sol_hoje   = df_raw[df_raw["Data_Solucao"].dt.date == hoje].shape[0]
-    total_mes  = len(df_mes)
-    total_ano  = len(df_ano)
-    total_ant  = len(df_mes_ant)
-    backlog    = df_raw[df_raw["Data_Solucao"].isna()].shape[0]
-    fcr_mes    = (df_mes["Finalizado_Mesmo_Dia"].sum() / total_mes * 100) if total_mes > 0 else 0
-
-    delta_m = total_mes - total_ant
-    d_cls   = "b-red" if delta_m > 0 else "b-green"
-    d_str   = f"{'↑' if delta_m > 0 else '↓'} {abs(delta_m)} vs mês ant."
-    f_cls   = "b-green" if fcr_mes >= 70 else ("b-gold" if fcr_mes >= 50 else "b-red")
+    # Aplicar filtros
+    df = df_raw.copy()
+    if di <= df_:
+        df = df[(df["Data_abertura"].dt.date >= di) & (df["Data_abertura"].dt.date <= df_)]
+    if sel_at:  df = df[df["Atendente"].isin(sel_at)]
+    if sel_sit: df = df[df["Situacao"].isin(sel_sit)]
+    if sel_or:  df = df[df["Origem"].isin(sel_or)]
 
     st.markdown(f"""
-    <div class="kpi-grid">
-      {kpi_card("Abertos Hoje",    f"{hoje_q:,}",       "chamados abertos",    "📥", RED)}
-      {kpi_card("Resolvidos Hoje", f"{sol_hoje:,}",     "chamados fechados",   "✅", GREEN)}
-      {kpi_card("Mês Atual",       f"{total_mes:,}",    f"chamados em {hoje.strftime('%b/%Y')}", "📅", BLUE, d_str, d_cls)}
-      {kpi_card(f"Ano {ano_atual}", f"{total_ano:,}",   "chamados no ano",     "🗓️", DARK)}
-      {kpi_card("FCR — Mês",       f"{fcr_mes:.1f}%",  "resolução 1º contato","⚡", GOLD,   "Meta: 70%", f_cls)}
-      {kpi_card("Backlog",         f"{backlog:,}",      "chamados em aberto",  "🗂️", ORANGE if backlog > 30 else GREEN)}
+    <div style="font-size:0.7rem;color:{MUTED};margin-top:6px">
+      📋 <b style="color:{WHITE}">{len(df):,}</b> chamados no período filtrado
+      &nbsp;·&nbsp; de <b style="color:{WHITE}">{di.strftime('%d/%m/%Y')}</b>
+      até <b style="color:{WHITE}">{df_.strftime('%d/%m/%Y')}</b>
+    </div>
+    """, unsafe_allow_html=True)
+    st.markdown('</div>', unsafe_allow_html=True)
+
+    # ── KPI STRIP ─────────────────────────────────────────────────────────────
+    mes_a, ano_a = hoje.month, hoje.year
+    df_mes = df_raw[(df_raw["Mes_abertura"]==mes_a) & (df_raw["Ano_abertura"]==ano_a)]
+    df_mes_ant = df_raw[
+        (df_raw["Mes_abertura"]==(mes_a-1 or 12)) &
+        (df_raw["Ano_abertura"]==(ano_a if mes_a>1 else ano_a-1))
+    ]
+
+    hoje_q   = df_raw[df_raw["Data_abertura"].dt.date == hoje].shape[0]
+    sol_h    = df_raw[df_raw["Data_Solucao"].dt.date == hoje].shape[0]
+    backlog  = df_raw[df_raw["Data_Solucao"].isna()].shape[0]
+    tot_mes  = len(df_mes)
+    tot_ant  = len(df_mes_ant)
+    fcr_mes  = (df_mes["Finalizado_Mesmo_Dia"].sum() / tot_mes * 100) if tot_mes > 0 else 0
+
+    df_res = df_raw[df_raw["TMR_h"] > 0]
+    tmr_h  = df_res["TMR_h"].mean() if not df_res.empty else 0
+    tmr_str = f"{tmr_h:.0f}h" if tmr_h < 72 else f"{tmr_h/24:.1f} dias"
+
+    tot_fil   = len(df)
+    res_fil   = df["Data_Solucao"].notna().sum()
+    enc_pct   = res_fil / tot_fil * 100 if tot_fil > 0 else 0
+
+    delta_m  = tot_mes - tot_ant
+    d_cls    = "b-red" if delta_m > 0 else "b-green"
+    d_str    = f"{'↑' if delta_m>0 else '↓'} {abs(delta_m)} vs mês ant."
+    fcr_cls  = "b-green" if fcr_mes >= 70 else ("b-gold" if fcr_mes >= 50 else "b-red")
+
+    st.markdown(f"""
+    <div style="display:grid;grid-template-columns:repeat(6,1fr);gap:12px;margin-bottom:16px">
+      {kpi("Abertos Hoje",    f"{hoje_q:,}",   "novos chamados",     "📥", BRAND,  "",      "b-muted")}
+      {kpi("Resolvidos Hoje", f"{sol_h:,}",    "encerrados hoje",    "✅", GREEN,  "",      "b-muted")}
+      {kpi("Mês Atual",       f"{tot_mes:,}",  f"{hoje.strftime('%b/%Y')}", "📅", TEAL, d_str, d_cls)}
+      {kpi("FCR do Mês",      f"{fcr_mes:.1f}%", "1º contato",      "⚡", GOLD,  "Meta: 70%", fcr_cls,
+           tip_text="Resolução no Primeiro Contato: % de chamados resolvidos sem necessidade de retorno do cliente.")}
+      {kpi("TMR Geral",       tmr_str,         "tempo médio resolução","⏱️", PURPLE, "",   "b-muted",
+           tip_text="Tempo Médio de Resolução: calculado entre Data de Abertura e Data de Solução dos chamados fechados.")}
+      {kpi("Backlog Total",   f"{backlog:,}",  "sem solução",        "🗂️", ORANGE if backlog>30 else GREEN, "", "b-muted",
+           tip_text="Fila de Pendências: chamados abertos que ainda não receberam solução.")}
     </div>
     """, unsafe_allow_html=True)
 
-    # ── ROTEAMENTO ────────────────────────────────────────────────────────────
-    if pagina == "📊 Painel Executivo":
-        pagina_executivo(df, df_raw, hoje)
-    elif pagina == "👥 Time de Suporte":
-        pagina_time(df)
-    elif pagina == "🎫 Situação dos Chamados":
-        pagina_situacao(df)
-    elif pagina == "🏢 Clientes & Contatos":
-        pagina_clientes(df)
-    elif pagina == "🧩 Módulos & Origens":
-        pagina_modulos(df)
+    # ── ABAS ─────────────────────────────────────────────────────────────────
+    tabs = st.tabs([
+        "📊 Resumo Geral",
+        "🏢 Clientes",
+        "👥 Atendentes",
+        "🎫 Situação dos Chamados",
+        "📈 SLA & KPIs",
+        "🚨 Alertas & Gestão",
+    ])
+
+    with tabs[0]: aba_resumo(df, df_raw, hoje)
+    with tabs[1]: aba_clientes(df)
+    with tabs[2]: aba_atendentes(df)
+    with tabs[3]: aba_situacao(df)
+    with tabs[4]: aba_sla(df)
+    with tabs[5]: aba_alertas(df, df_raw)
 
 
 if __name__ == "__main__":
