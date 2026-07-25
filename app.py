@@ -11,7 +11,7 @@ import pyodbc
 import plotly.express as px
 import plotly.graph_objects as go
 from datetime import date, datetime, timedelta
-import pytz
+from zoneinfo import ZoneInfo
 import os, warnings
 warnings.filterwarnings("ignore")
 
@@ -1319,8 +1319,7 @@ def aba_alertas(df, df_raw):
 #  MAIN
 # ══════════════════════════════════════════════════════════════════════════════
 def main():
-    _br = pytz.timezone("America/Sao_Paulo")
-    hoje = datetime.now(_br).date()
+    hoje = datetime.now(ZoneInfo("America/Sao_Paulo")).date()
 
     # ── HEADER ────────────────────────────────────────────────────────────────
     c1, ct, c2 = st.columns([1,5,1], vertical_alignment="center")
@@ -1334,7 +1333,7 @@ def main():
   </div>
   <div style="font-size:0.72rem;color:{MUTED};margin-top:2px">
     <span class="dot-live"></span>
-    Dados em tempo real &nbsp;·&nbsp; Atualizado em {datetime.now(pytz.timezone('America/Sao_Paulo')).strftime('%d/%m/%Y às %H:%M')}
+    Dados em tempo real &nbsp;·&nbsp; Atualizado em {datetime.now(ZoneInfo('America/Sao_Paulo')).strftime('%d/%m/%Y às %H:%M')}
   </div>
 </div>""", unsafe_allow_html=True)
     with c2:
