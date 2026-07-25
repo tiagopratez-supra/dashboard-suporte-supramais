@@ -117,10 +117,48 @@ div[data-testid="stDateInput"] div[role="combobox"] {{
   color:{WHITE} !important;
   -webkit-text-fill-color:{WHITE} !important;
 }}
-/* Calendário do date picker */
-[data-baseweb="calendar"] {{ background:{CARD} !important; }}
-[data-baseweb="calendar"] * {{ color:{WHITE} !important; }}
-[data-baseweb="calendar"] [aria-selected="true"] * {{ background:{BRAND} !important; }}
+/* ── Calendário do date picker ── */
+[data-baseweb="calendar"],
+[data-baseweb="calendar"] > div,
+div[data-baseweb="calendar"] {{
+  background:{CARD} !important;
+  border:1px solid {BORDER} !important;
+  border-radius:10px !important;
+}}
+[data-baseweb="calendar"] button,
+[data-baseweb="calendar"] [role="gridcell"] button,
+[data-baseweb="month-header"] button {{
+  background:transparent !important;
+  color:{WHITE} !important;
+}}
+[data-baseweb="calendar"] [aria-selected="true"] button {{
+  background:{BRAND} !important;
+  border-radius:50% !important;
+  color:{WHITE} !important;
+}}
+[data-baseweb="calendar"] [data-today="true"] button {{
+  border:1px solid {TEAL} !important;
+  border-radius:50% !important;
+  color:{TEAL} !important;
+}}
+[data-baseweb="calendar"] button:hover {{
+  background:{CARD2} !important;
+  border-radius:50% !important;
+}}
+[data-baseweb="calendar"] [data-baseweb="typography"] {{
+  color:{MUTED} !important;
+}}
+/* Popup overlay do date picker */
+div[data-baseweb="popover"] {{
+  background:{CARD} !important;
+  border:1px solid {BORDER} !important;
+  border-radius:10px !important;
+}}
+div[data-baseweb="popover"] * {{
+  background:inherit;
+}}
+/* Seta de navegação do calendário */
+[data-baseweb="calendar"] svg {{ fill:{WHITE} !important; }}
 
 /* ── Botão ── */
 .stButton button {{
@@ -386,8 +424,7 @@ def carregar_dados() -> pd.DataFrame:
 # ══════════════════════════════════════════════════════════════════════════════
 #  ABA 0 — HOJE (sempre dados do dia atual, sem filtros de período)
 # ══════════════════════════════════════════════════════════════════════════════
-def aba_hoje(df_raw):
-    hoje = date.today()
+def aba_hoje(df_raw, hoje):
     df_h = df_raw[df_raw["Data_abertura"].dt.date == hoje].copy()
     df_sol_h = df_raw[df_raw["Data_Solucao"].dt.date == hoje]
 
@@ -1410,13 +1447,13 @@ def main():
         (df_raw["Ano_abertura"]==(ano_a if mes_a>1 else ano_a-1))
     ]
 
-    hoje_q  = df_raw[df_raw["Data_abertura"].dt.date==hoje].shape[0]
-    sol_h   = df_raw[df_raw["Data_Solucao"].dt.date==hoje].shape[0]
     backlog = df_raw[df_raw["Data_Solucao"].isna()].shape[0]
     tot_mes = len(df_mes)
     tot_ant = len(df_mant)
     fcr_mes = safe_pct(df_mes["Finalizado_Mesmo_Dia"].sum(), tot_mes)
     tmr_raw = df_raw[df_raw["TMR_h"]>0]["TMR_h"].mean()
+    tot_per = len(df)
+    clientes_per = df["Cliente"].nunique()
 
     delta_m = tot_mes - tot_ant
     d_cls   = "b-red" if delta_m>0 else "b-green"
@@ -1424,14 +1461,14 @@ def main():
     f_cls   = "b-green" if fcr_mes>=70 else ("b-gold" if fcr_mes>=50 else "b-red")
 
     st.markdown(f"""<div class="kpi-grid">
-  {kpi("Abertos Hoje",   f"{hoje_q:,}",    "novos chamados",     "📥", BRAND)}
-  {kpi("Resolvidos Hoje",f"{sol_h:,}",     "fechamentos hoje",   "✅", GREEN)}
-  {kpi("Mês Atual",      f"{tot_mes:,}",   hoje.strftime('%b/%Y'),"📅", TEAL, d_str, d_cls)}
-  {kpi("FCR do Mês",     f"{fcr_mes:.1f}%","1º contato",         "⚡", GOLD,"Meta: 70%",f_cls,
+  {kpi("Período Filtrado", f"{tot_per:,}",   "chamados no período",  "📋", TEAL)}
+  {kpi("Clientes",         f"{clientes_per:,}","no período",          "🏢", PURPLE)}
+  {kpi("Mês Atual",        f"{tot_mes:,}",   hoje.strftime('%b/%Y'), "📅", BRAND, d_str, d_cls)}
+  {kpi("FCR do Mês",       f"{fcr_mes:.1f}%","1º contato",           "⚡", GOLD,"Meta: 70%",f_cls,
        tip_text="Resolução no Primeiro Contato: % de chamados finalizados sem retorno do cliente.")}
-  {kpi("TMR Geral",      tmr_fmt(tmr_raw), "tempo médio resolução","⏱️",PURPLE,"","b-muted",
+  {kpi("TMR Geral",        tmr_fmt(tmr_raw),"tempo médio resolução", "⏱️", ORANGE,"","b-muted",
        tip_text="Tempo Médio de Resolução: calculado entre data de abertura e data de solução.")}
-  {kpi("Backlog",        f"{backlog:,}",   "sem solução",         "🗂️",ORANGE if backlog>30 else GREEN,"","b-muted",
+  {kpi("Backlog",          f"{backlog:,}",  "sem solução",            "🗂️", DANGER if backlog>30 else GREEN,"","b-muted",
        tip_text="Fila de pendências: chamados abertos sem data de solução (todos os períodos).")}
 </div>""", unsafe_allow_html=True)
 
@@ -1446,7 +1483,7 @@ def main():
         "🚨 Alertas & Gestão",
     ])
 
-    with tabs[0]: aba_hoje(df_raw)
+    with tabs[0]: aba_hoje(df_raw, hoje)
     with tabs[1]: aba_resumo(df)
     with tabs[2]: aba_clientes(df)
     with tabs[3]: aba_atendentes(df)
