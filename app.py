@@ -7,7 +7,7 @@
 import streamlit as st
 import streamlit.components.v1 as components
 import pandas as pd
-import pyodbc
+import pymssql
 import plotly.express as px
 import plotly.graph_objects as go
 from datetime import date, datetime, timedelta
@@ -396,11 +396,19 @@ def tmr_fmt(h):
 @st.cache_data(ttl=1800, show_spinner="Carregando dados…")
 def carregar_dados() -> pd.DataFrame:
     cfg = st.secrets["database"]
-    conn = pyodbc.connect(
-        f"DRIVER={{ODBC Driver 17 for SQL Server}};"
-        f"SERVER={cfg['server']};DATABASE={cfg['database']};"
-        f"UID={cfg['username']};PWD={cfg['password']};",
-        timeout=30,
+    # server pode vir como "host,porta" — pymssql precisa separar
+    srv = cfg["server"]
+    if "," in srv:
+        host, port = srv.split(",", 1)
+        port = int(port)
+    else:
+        host, port = srv, 1433
+    conn = pymssql.connect(
+        server=host, port=port,
+        database=cfg["database"],
+        user=cfg["username"],
+        password=cfg["password"],
+        login_timeout=30,
     )
     SQL_QUERY = """
     SELECT
