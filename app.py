@@ -11,6 +11,7 @@ import pyodbc
 import plotly.express as px
 import plotly.graph_objects as go
 from datetime import date, datetime, timedelta
+import pytz
 import os, warnings
 warnings.filterwarnings("ignore")
 
@@ -92,7 +93,9 @@ li[role="option"][aria-selected="true"] {{ background:{CARD2} !important; color:
 [data-baseweb="tag"] button svg {{ fill:{WHITE} !important; }}
 
 /* ── DATE INPUT — dark fix ── */
-div[data-testid="stDateInput"] > div {{
+div[data-testid="stDateInput"] > div,
+div[data-testid="stDateInput"] [data-baseweb="base-input"],
+div[data-testid="stDateInput"] [data-baseweb="input"] {{
   background:{CARD2} !important;
   border:1px solid {BORDER} !important;
   border-radius:8px !important;
@@ -100,10 +103,24 @@ div[data-testid="stDateInput"] > div {{
 div[data-testid="stDateInput"] input {{
   color:{WHITE} !important;
   background:transparent !important;
+  -webkit-text-fill-color:{WHITE} !important;
+  opacity:1 !important;
+}}
+div[data-testid="stDateInput"] input::placeholder {{
+  color:{MUTED} !important;
+  opacity:1 !important;
+}}
+/* valor exibido como texto quando o campo não está em foco */
+div[data-testid="stDateInput"] p,
+div[data-testid="stDateInput"] span,
+div[data-testid="stDateInput"] div[role="combobox"] {{
+  color:{WHITE} !important;
+  -webkit-text-fill-color:{WHITE} !important;
 }}
 /* Calendário do date picker */
 [data-baseweb="calendar"] {{ background:{CARD} !important; }}
 [data-baseweb="calendar"] * {{ color:{WHITE} !important; }}
+[data-baseweb="calendar"] [aria-selected="true"] * {{ background:{BRAND} !important; }}
 
 /* ── Botão ── */
 .stButton button {{
@@ -1302,7 +1319,8 @@ def aba_alertas(df, df_raw):
 #  MAIN
 # ══════════════════════════════════════════════════════════════════════════════
 def main():
-    hoje = date.today()
+    _br = pytz.timezone("America/Sao_Paulo")
+    hoje = datetime.now(_br).date()
 
     # ── HEADER ────────────────────────────────────────────────────────────────
     c1, ct, c2 = st.columns([1,5,1], vertical_alignment="center")
@@ -1316,7 +1334,7 @@ def main():
   </div>
   <div style="font-size:0.72rem;color:{MUTED};margin-top:2px">
     <span class="dot-live"></span>
-    Dados em tempo real &nbsp;·&nbsp; Atualizado em {datetime.now().strftime('%d/%m/%Y às %H:%M')}
+    Dados em tempo real &nbsp;·&nbsp; Atualizado em {datetime.now(pytz.timezone('America/Sao_Paulo')).strftime('%d/%m/%Y às %H:%M')}
   </div>
 </div>""", unsafe_allow_html=True)
     with c2:
