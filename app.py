@@ -1,7 +1,6 @@
 # =============================================================================
 # Central de Suporte — SupraMAIS  |  Command Center
 # Stack: Streamlit + pyodbc + pandas + plotly
-# SQL : INALTERADO — lê direto da view sgrp_atendimentos_geral
 # =============================================================================
 
 import streamlit as st
@@ -110,7 +109,6 @@ div[data-testid="stDateInput"] input::placeholder {{
   color:{MUTED} !important;
   opacity:1 !important;
 }}
-/* valor exibido como texto quando o campo não está em foco */
 div[data-testid="stDateInput"] p,
 div[data-testid="stDateInput"] span,
 div[data-testid="stDateInput"] div[role="combobox"] {{
@@ -148,7 +146,6 @@ div[data-baseweb="calendar"] {{
 [data-baseweb="calendar"] [data-baseweb="typography"] {{
   color:{MUTED} !important;
 }}
-/* Popup overlay do date picker */
 div[data-baseweb="popover"] {{
   background:{CARD} !important;
   border:1px solid {BORDER} !important;
@@ -157,7 +154,6 @@ div[data-baseweb="popover"] {{
 div[data-baseweb="popover"] * {{
   background:inherit;
 }}
-/* Seta de navegação do calendário */
 [data-baseweb="calendar"] svg {{ fill:{WHITE} !important; }}
 
 /* ── Botão ── */
@@ -385,18 +381,17 @@ def safe_pct(num, den):
     return round(num / den * 100, 1) if den and den > 0 else 0.0
 
 def tmr_fmt(h):
-    if pd.isna(h) or h <= 0:
+    if pd.isna(h) or h < 0:
         return "N/D"
     if h < 24:
         return f"{h:.1f}h"
     return f"{h/24:.1f} dias"
 
 
-# ── QUERY & CACHE (SQL INALTERADO) ────────────────────────────────────────────
+# ── QUERY & CACHE (SQL ATUALIZADO COM HORAS E FORMATO BR) ────────────────────
 @st.cache_data(ttl=1800, show_spinner="Carregando dados…")
 def carregar_dados() -> pd.DataFrame:
     cfg = st.secrets["database"]
-    # server pode vir como "host,porta" — pymssql precisa separar
     srv = cfg["server"]
     if "," in srv:
         host, port = srv.split(",", 1)
@@ -412,9 +407,10 @@ def carregar_dados() -> pd.DataFrame:
     )
     SQL_QUERY = """
     SELECT
-        Sac, CONVERT(VARCHAR(10), Data_abertura, 103) AS Data_abertura,
+        Sac, 
+        CONVERT(VARCHAR(10), Data_abertura, 103) + ' ' + CONVERT(VARCHAR(8), Data_abertura, 108) AS Data_abertura,
         Dia_abertura, Mes_abertura, Ano_abertura,
-        CONVERT(VARCHAR(10), [Data Solucao], 103) AS Data_Solucao,
+        CONVERT(VARCHAR(10), [Data Solucao], 103) + ' ' + CONVERT(VARCHAR(8), [Data Solucao], 108) AS Data_Solucao,
         [Cliente Codigo] AS Cliente_Codigo, Cliente, Contato,
         Assunto, Motivo, Motivocodigo, Modulo, Situacao, Atendente, Origem,
         Finalizado_Mesmo_Dia, Tipo
@@ -423,14 +419,17 @@ def carregar_dados() -> pd.DataFrame:
     """
     df = pd.read_sql(SQL_QUERY, conn)
     conn.close()
+    
+    # ATUALIZADO: Conversão incluindo as horas
     for col in ["Data_abertura", "Data_Solucao"]:
-        df[col] = pd.to_datetime(df[col], format="%d/%m/%Y", errors="coerce")
+        df[col] = pd.to_datetime(df[col], format="%d/%m/%Y %H:%M:%S", errors="coerce")
+        
     df["TMR_h"] = (df["Data_Solucao"] - df["Data_abertura"]).dt.total_seconds() / 3600
     return df
 
 
 # ══════════════════════════════════════════════════════════════════════════════
-#  ABA 0 — HOJE (sempre dados do dia atual, sem filtros de período)
+#  ABA 0 — HOJE
 # ══════════════════════════════════════════════════════════════════════════════
 def aba_hoje(df_raw, hoje):
     df_h = df_raw[df_raw["Data_abertura"].dt.date == hoje].copy()
@@ -440,7 +439,9 @@ def aba_hoje(df_raw, hoje):
     sol_h  = len(df_sol_h)
     backlog = df_raw[df_raw["Data_Solucao"].isna()].shape[0]
     fcr_h  = safe_pct(df_h["Finalizado_Mesmo_Dia"].sum(), ab_h)
-    tmr_h_v = df_sol_h[df_sol_h["TMR_h"] > 0]["TMR_h"].mean()
+    
+    # ATUALIZADO: >= 0 em vez de > 0
+    tmr_h_v = df_sol_h[df_sol_h["TMR_h"] >= 0]["TMR_h"].mean()
 
     # KPIs do dia
     st.markdown(f"""
@@ -466,7 +467,6 @@ def aba_hoje(df_raw, hoje):
         </div>""", unsafe_allow_html=True)
         return
 
-    # Linha 1
     c1, c2, c3 = st.columns([2, 2, 1])
 
     with c1:
@@ -520,7 +520,6 @@ def aba_hoje(df_raw, hoje):
             st.markdown(cc(), unsafe_allow_html=True)
             st.warning(f"Gráfico indisponível: {e}")
 
-    # Linha 2: situação + módulos
     c4, c5 = st.columns(2)
     with c4:
         try:
@@ -555,7 +554,6 @@ def aba_hoje(df_raw, hoje):
             st.markdown(cc(), unsafe_allow_html=True)
             st.warning(f"Gráfico indisponível: {e}")
 
-    # Lista chamados do dia
     st.markdown('<span class="sec-t">📋 Lista de Chamados Abertos Hoje</span>', unsafe_allow_html=True)
     cols_show = ["Sac","Cliente","Contato","Atendente","Modulo","Situacao","Origem","Assunto"]
     cols_disp = [c for c in cols_show if c in df_h.columns]
@@ -722,7 +720,6 @@ def aba_clientes(df):
         st.markdown(rank_html(dc2,"Contato","Total",GOLD), unsafe_allow_html=True)
         st.markdown(cc(), unsafe_allow_html=True)
 
-    # Raio-X
     st.markdown('<span class="sec-t">🔍 Raio-X do Cliente</span>', unsafe_allow_html=True)
     st.markdown(co(""), unsafe_allow_html=True)
     clientes = sorted(df["Cliente"].dropna().unique())
@@ -731,7 +728,10 @@ def aba_clientes(df):
         dce = df[df["Cliente"]==cli]
         tot = len(dce); ab = dce["Data_Solucao"].isna().sum()
         fcr = safe_pct(dce["Finalizado_Mesmo_Dia"].sum(), tot)
-        tmr = dce[dce["TMR_h"]>0]["TMR_h"].mean()
+        
+        # ATUALIZADO: >= 0 em vez de > 0
+        tmr = dce[dce["TMR_h"]>=0]["TMR_h"].mean()
+        
         st.markdown(f"""
         <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:12px">
           {kpi("Total Chamados", f"{tot:,}", "", "📋", TEAL)}
@@ -776,19 +776,20 @@ def aba_clientes(df):
 #  ABA 3 — ATENDENTES
 # ══════════════════════════════════════════════════════════════════════════════
 def aba_atendentes(df):
-    # Calcular métricas por atendente com segurança
     df_at = df.groupby("Atendente").agg(
         Total=("Sac","count"),
         Resolvidos=("Data_Solucao", lambda x: x.notna().sum()),
         Em_Aberto=("Data_Solucao", lambda x: x.isna().sum()),
         FCR_raw=("Finalizado_Mesmo_Dia","sum"),
-        TMR_raw=("TMR_h", lambda x: x[x>0].mean() if (x>0).any() else float("nan")),
+        
+        # ATUALIZADO: >= 0 em vez de > 0
+        TMR_raw=("TMR_h", lambda x: x[x>=0].mean() if (x>=0).any() else float("nan")),
+        
     ).reset_index()
     df_at["FCR_pct"] = df_at.apply(lambda r: safe_pct(r["FCR_raw"], r["Total"]), axis=1)
     df_at["Enc_pct"] = df_at.apply(lambda r: safe_pct(r["Resolvidos"], r["Total"]), axis=1)
     df_at = df_at[df_at["Total"] > 0].sort_values("Total", ascending=False)
 
-    # Tabela
     st.markdown('<span class="sec-t">📋 Performance por Atendente</span>', unsafe_allow_html=True)
     st.markdown(co(""), unsafe_allow_html=True)
     max_fcr = df_at["FCR_pct"].max() or 1
@@ -829,7 +830,6 @@ def aba_atendentes(df):
 </tr></thead><tbody>{rows}</tbody></table>""", unsafe_allow_html=True)
     st.markdown(cc(), unsafe_allow_html=True)
 
-    # Quadrante + Heatmap
     cq, ch = st.columns([3,2])
     with cq:
         try:
@@ -894,7 +894,6 @@ def aba_atendentes(df):
             st.markdown(cc(), unsafe_allow_html=True)
             st.warning(f"Gráfico indisponível: {e}")
 
-    # Gauges FCR
     st.markdown(f'<span class="sec-t">⚡ {tip("FCR","Resolução no Primeiro Contato — meta 70%")} por Atendente</span>', unsafe_allow_html=True)
     try:
         df_fg = df_at.sort_values("FCR_pct",ascending=False)
@@ -997,7 +996,6 @@ def aba_situacao(df):
             st.markdown(cc(), unsafe_allow_html=True)
             st.warning(f"Gráfico indisponível: {e}")
 
-    # Backlog aging
     try:
         hoje = date.today()
         df_bl = df[df["Data_Solucao"].isna()].copy()
@@ -1057,7 +1055,6 @@ def aba_situacao(df):
 #  ABA 5 — SLA & KPIs
 # ══════════════════════════════════════════════════════════════════════════════
 def aba_sla(df):
-    # Glossário
     st.markdown(f"""<div class="chart-card" style="margin-bottom:12px">
   <div class="chart-title">ℹ️ Glossário dos Indicadores</div>
   <div style="font-size:0.78rem;color:{MUTED};line-height:1.8">
@@ -1092,7 +1089,6 @@ def aba_sla(df):
                 mode="lines+markers", name="FCR %", yaxis="y2",
                 line=dict(color=GOLD, width=2.5), marker=dict(size=6),
             )
-            # Meta line as scatter (avoid yref issue)
             fig.add_scatter(
                 x=dfm["MesAno"],
                 y=[70]*len(dfm),
@@ -1115,7 +1111,10 @@ def aba_sla(df):
     with ct:
         try:
             st.markdown(co(f"⏱️ {tip('TMR','Tempo Médio de Resolução')} por Atendente (dias)"), unsafe_allow_html=True)
-            dtmr = df[df["TMR_h"]>0].groupby("Atendente")["TMR_h"].mean().reset_index()
+            
+            # ATUALIZADO: >= 0 em vez de > 0
+            dtmr = df[df["TMR_h"]>=0].groupby("Atendente")["TMR_h"].mean().reset_index()
+            
             dtmr.columns = ["Atendente","TMR_h"]
             dtmr["TMR_dias"] = (dtmr["TMR_h"]/24).round(2)
             dtmr = dtmr.sort_values("TMR_dias")
@@ -1143,7 +1142,6 @@ def aba_sla(df):
             st.markdown(cc(), unsafe_allow_html=True)
             st.warning(f"Gráfico indisponível: {e}")
 
-    # Sazonalidade
     try:
         st.markdown(co(f"🌡️ Sazonalidade — Módulo × Mês (identifica picos anuais)"), unsafe_allow_html=True)
         meses = {1:"Jan",2:"Fev",3:"Mar",4:"Abr",5:"Mai",6:"Jun",
@@ -1169,7 +1167,6 @@ def aba_sla(df):
         st.markdown(cc(), unsafe_allow_html=True)
         st.warning(f"Gráfico indisponível: {e}")
 
-    # Anual
     ca, cb = st.columns(2)
     with ca:
         try:
@@ -1206,7 +1203,6 @@ def aba_sla(df):
             fig5.update_coloraxes(showscale=False)
             fig5.update_traces(textposition="outside",cliponaxis=False,
                                 textfont=dict(color=WHITE))
-            # Meta como linha scatter
             fig5.add_scatter(x=dyf["Ano"], y=[70]*len(dyf),
                               mode="lines", name="Meta 70%",
                               line=dict(color=GREEN,width=1.5,dash="dash"))
@@ -1236,7 +1232,6 @@ def aba_alertas(df, df_raw):
         urgentes = df_bl[(df_bl["Dias"] >= 7) & (df_bl["Dias"] < 30)].sort_values("Dias", ascending=False)
         recentes = df_bl[df_bl["Dias"] < 7]
 
-        # KPIs de alerta
         st.markdown(f"""<div class="kpi-grid">
   <div class="kpi-card" style="border-left:4px solid {DANGER}">
     <div class="kpi-label">🔴 Críticos (+30 dias)</div>
@@ -1325,7 +1320,6 @@ def aba_alertas(df, df_raw):
             else:
                 st.markdown(f'<div class="alert-card alert-info"><div class="alert-title">✅ Todos acima da meta!</div></div>', unsafe_allow_html=True)
 
-        # Sankey
         st.markdown('<span class="sec-t">🔀 Fluxo dos Chamados — Origem → Módulo → Situação</span>', unsafe_allow_html=True)
         st.markdown(co(""), unsafe_allow_html=True)
         try:
@@ -1366,7 +1360,6 @@ def aba_alertas(df, df_raw):
 def main():
     hoje = datetime.now(ZoneInfo("America/Sao_Paulo")).date()
 
-    # ── HEADER ────────────────────────────────────────────────────────────────
     c1, ct, c2 = st.columns([1,5,1], vertical_alignment="center")
     with c1:
         if os.path.exists("logo_supra.png"):
@@ -1387,7 +1380,6 @@ def main():
 
     st.markdown(f"<hr>", unsafe_allow_html=True)
 
-    # ── CARREGAR DADOS ────────────────────────────────────────────────────────
     try:
         df_raw = carregar_dados()
     except Exception as e:
@@ -1397,7 +1389,6 @@ def main():
         st.warning("⚠️ Nenhum registro retornado.")
         st.stop()
 
-    # ── FILTROS GLOBAIS (visíveis, linha horizontal) ──────────────────────────
     with st.container():
         st.markdown(f"""<div class="filter-bar-title">
   <span style="display:inline-block;width:6px;height:6px;background:{TEAL};border-radius:50%"></span>
@@ -1433,7 +1424,6 @@ def main():
                 st.cache_data.clear()
                 st.rerun()
 
-    # Aplicar filtros
     df = df_raw.copy()
     if di <= df_:
         df = df[(df["Data_abertura"].dt.date >= di) & (df["Data_abertura"].dt.date <= df_)]
@@ -1447,7 +1437,6 @@ def main():
   até <b style="color:{WHITE}">{df_.strftime('%d/%m/%Y')}</b>
 </div>""", unsafe_allow_html=True)
 
-    # ── KPI STRIP (dados do período filtrado) ─────────────────────────────────
     mes_a, ano_a = hoje.month, hoje.year
     df_mes  = df_raw[(df_raw["Mes_abertura"]==mes_a) & (df_raw["Ano_abertura"]==ano_a)]
     df_mant = df_raw[
@@ -1459,7 +1448,10 @@ def main():
     tot_mes = len(df_mes)
     tot_ant = len(df_mant)
     fcr_mes = safe_pct(df_mes["Finalizado_Mesmo_Dia"].sum(), tot_mes)
-    tmr_raw = df_raw[df_raw["TMR_h"]>0]["TMR_h"].mean()
+    
+    # ATUALIZADO: >= 0 em vez de > 0
+    tmr_raw = df_raw[df_raw["TMR_h"]>=0]["TMR_h"].mean()
+    
     tot_per = len(df)
     clientes_per = df["Cliente"].nunique()
 
@@ -1480,7 +1472,6 @@ def main():
        tip_text="Fila de pendências: chamados abertos sem data de solução (todos os períodos).")}
 </div>""", unsafe_allow_html=True)
 
-    # ── ABAS ─────────────────────────────────────────────────────────────────
     tabs = st.tabs([
         "🕐 Hoje",
         "📊 Resumo Geral",
