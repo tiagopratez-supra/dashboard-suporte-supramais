@@ -420,7 +420,7 @@ def carregar_dados() -> pd.DataFrame:
     df = pd.read_sql(SQL_QUERY, conn)
     conn.close()
     
-    # ATUALIZADO: Conversão incluindo as horas
+    # Conversão incluindo as horas
     for col in ["Data_abertura", "Data_Solucao"]:
         df[col] = pd.to_datetime(df[col], format="%d/%m/%Y %H:%M:%S", errors="coerce")
         
@@ -440,7 +440,7 @@ def aba_hoje(df_raw, hoje):
     backlog = df_raw[df_raw["Data_Solucao"].isna()].shape[0]
     fcr_h  = safe_pct(df_h["Finalizado_Mesmo_Dia"].sum(), ab_h)
     
-    # ATUALIZADO: >= 0 em vez de > 0
+    # >= 0 em vez de > 0
     tmr_h_v = df_sol_h[df_sol_h["TMR_h"] >= 0]["TMR_h"].mean()
 
     # KPIs do dia
@@ -729,7 +729,7 @@ def aba_clientes(df):
         tot = len(dce); ab = dce["Data_Solucao"].isna().sum()
         fcr = safe_pct(dce["Finalizado_Mesmo_Dia"].sum(), tot)
         
-        # ATUALIZADO: >= 0 em vez de > 0
+        # >= 0 em vez de > 0
         tmr = dce[dce["TMR_h"]>=0]["TMR_h"].mean()
         
         st.markdown(f"""
@@ -782,7 +782,7 @@ def aba_atendentes(df):
         Em_Aberto=("Data_Solucao", lambda x: x.isna().sum()),
         FCR_raw=("Finalizado_Mesmo_Dia","sum"),
         
-        # ATUALIZADO: >= 0 em vez de > 0
+        # >= 0 em vez de > 0
         TMR_raw=("TMR_h", lambda x: x[x>=0].mean() if (x>=0).any() else float("nan")),
         
     ).reset_index()
@@ -1112,7 +1112,7 @@ def aba_sla(df):
         try:
             st.markdown(co(f"⏱️ {tip('TMR','Tempo Médio de Resolução')} por Atendente (dias)"), unsafe_allow_html=True)
             
-            # ATUALIZADO: >= 0 em vez de > 0
+            # >= 0 em vez de > 0
             dtmr = df[df["TMR_h"]>=0].groupby("Atendente")["TMR_h"].mean().reset_index()
             
             dtmr.columns = ["Atendente","TMR_h"]
@@ -1395,7 +1395,8 @@ def main():
   FILTROS GLOBAIS — aplicados em todas as abas (exceto "Hoje")
 </div>""", unsafe_allow_html=True)
 
-        fc1, fc2, fc3, fc4, fc5, fc6 = st.columns([1.1, 1.1, 2, 2, 2, 0.7])
+        # Atualizado: adicionado fc7 para comportar todos os 6 filtros
+        fc1, fc2, fc3, fc4, fc5, fc6, fc7 = st.columns([1.2, 1.2, 1.8, 1.8, 1.8, 1.8, 0.8])
 
         data_min = df_raw["Data_abertura"].dropna().min().date()
         data_max = max(df_raw["Data_abertura"].dropna().max().date(), hoje)
@@ -1418,7 +1419,14 @@ def main():
             origens = sorted(df_raw["Origem"].dropna().astype(str).unique())
             sel_or = st.multiselect("Origem / Canal", origens,
                                      placeholder="Todas as origens")
+        
+        # Novo Filtro de Módulo Adicionado
         with fc6:
+            modulos = sorted(df_raw["Modulo"].dropna().astype(str).unique())
+            sel_mod = st.multiselect("Módulo", modulos,
+                                     placeholder="Todos os módulos")
+                                     
+        with fc7:
             st.markdown("<div style='height:22px'></div>", unsafe_allow_html=True)
             if st.button("🔄 Atualizar"):
                 st.cache_data.clear()
@@ -1430,6 +1438,7 @@ def main():
     if sel_at:  df = df[df["Atendente"].isin(sel_at)]
     if sel_sit: df = df[df["Situacao"].isin(sel_sit)]
     if sel_or:  df = df[df["Origem"].isin(sel_or)]
+    if sel_mod: df = df[df["Modulo"].isin(sel_mod)] # <- Regra de filtragem do Módulo
 
     st.markdown(f"""<div style="font-size:0.68rem;color:{MUTED};margin:6px 0 14px">
   📋 <b style="color:{WHITE}">{len(df):,}</b> chamados no período
@@ -1449,7 +1458,7 @@ def main():
     tot_ant = len(df_mant)
     fcr_mes = safe_pct(df_mes["Finalizado_Mesmo_Dia"].sum(), tot_mes)
     
-    # ATUALIZADO: >= 0 em vez de > 0
+    # >= 0 em vez de > 0
     tmr_raw = df_raw[df_raw["TMR_h"]>=0]["TMR_h"].mean()
     
     tot_per = len(df)
