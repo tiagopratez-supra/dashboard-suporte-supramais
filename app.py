@@ -485,8 +485,10 @@ def aba_hoje(df_raw, hoje):
             fig.update_layout(**pb(max(240, len(ordem_at)*35),
                 xaxis=dict(showgrid=False), yaxis=dict(showgrid=False),
                 yaxis_title="", xaxis_title="",
-                legend=dict(orientation="h", y=1.12, x=0, title="", font=dict(color=WHITE, size=10)),
-                margin=dict(t=35, b=8, l=6, r=6))) # Ajuste da margem superior para acomodar a legenda horizontal
+                legend=dict(orientation="h", y=1.12, x=0, title="", font=dict(color=WHITE, size=10))
+            ))
+            # Ajusta a margem superior separadamente para não dar conflito
+            fig.update_layout(margin=dict(t=35, b=8, l=6, r=6)) 
             
             st.plotly_chart(fig, use_container_width=True)
             st.markdown(cc(), unsafe_allow_html=True)
