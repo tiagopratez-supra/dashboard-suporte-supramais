@@ -471,16 +471,23 @@ def aba_hoje(df_raw, hoje):
 
     with c1:
         try:
-            st.markdown(co("📊 Chamados de Hoje — por Atendente"), unsafe_allow_html=True)
-            df_at_h = df_h.groupby("Atendente").size().reset_index(name="Qtd").sort_values("Qtd")
-            fig = px.bar(df_at_h, y="Atendente", x="Qtd", orientation="h", text="Qtd",
-                          color="Qtd", color_continuous_scale=[[0,CARD2],[1,TEAL]])
-            fig.update_coloraxes(showscale=False)
-            fig.update_traces(textposition="outside", cliponaxis=False,
-                               textfont=dict(color=WHITE))
-            fig.update_layout(**pb(max(200, len(df_at_h)*32),
+            st.markdown(co("📊 Atendimentos Hoje: Atendente × Canal"), unsafe_allow_html=True)
+            df_at_or = df_h.groupby(["Atendente", "Origem"]).size().reset_index(name="Qtd")
+            
+            # Ordenar atendentes pelo total de chamados para manter o gráfico alinhado e organizado
+            ordem_at = df_at_or.groupby("Atendente")["Qtd"].sum().sort_values().index.tolist()
+            
+            fig = px.bar(df_at_or, y="Atendente", x="Qtd", color="Origem", orientation="h", text="Qtd",
+                         category_orders={"Atendente": ordem_at},
+                         color_discrete_sequence=CORES, barmode="stack")
+            
+            fig.update_traces(textposition="inside", textfont=dict(size=11, color=WHITE), insidetextanchor="middle")
+            fig.update_layout(**pb(max(240, len(ordem_at)*35),
                 xaxis=dict(showgrid=False), yaxis=dict(showgrid=False),
-                yaxis_title="", xaxis_title=""))
+                yaxis_title="", xaxis_title="",
+                legend=dict(orientation="h", y=1.12, x=0, title="", font=dict(color=WHITE, size=10)),
+                margin=dict(t=35, b=8, l=6, r=6))) # Ajuste da margem superior para acomodar a legenda horizontal
+            
             st.plotly_chart(fig, use_container_width=True)
             st.markdown(cc(), unsafe_allow_html=True)
         except Exception as e:
