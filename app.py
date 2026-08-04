@@ -115,46 +115,63 @@ div[data-testid="stDateInput"] div[role="combobox"] {{
   color:{WHITE} !important;
   -webkit-text-fill-color:{WHITE} !important;
 }}
-/* ── Calendário do date picker ── */
-[data-baseweb="calendar"],
-[data-baseweb="calendar"] > div,
-div[data-baseweb="calendar"] {{
+
+/* ── Calendário do date picker (NOVO MODELO LIMPO) ── */
+div[data-baseweb="popover"] > div {{
   background:{CARD} !important;
   border:1px solid {BORDER} !important;
-  border-radius:10px !important;
+  border-radius:8px !important;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.5) !important;
 }}
-[data-baseweb="calendar"] button,
-[data-baseweb="calendar"] [role="gridcell"] button,
-[data-baseweb="month-header"] button {{
+div[data-baseweb="calendar"],
+div[data-baseweb="calendar"] > div {{
+  background:{CARD} !important;
+}}
+/* Textos em geral dentro do calendário (Mês, Ano, Dias) */
+div[data-baseweb="calendar"] [data-baseweb="typography"] {{
+  color:{WHITE} !important;
+  font-weight:500 !important;
+}}
+/* Dias da semana (Su, Mo, Tu...) no cabeçalho */
+div[data-baseweb="calendar"] div[role="columnheader"] [data-baseweb="typography"] {{
+  color:{MUTED} !important;
+  font-size:0.75rem !important;
+  font-weight:700 !important;
+}}
+/* Setas de navegação */
+div[data-baseweb="calendar"] button svg {{
+  fill:{WHITE} !important;
+}}
+/* Botões dos dias */
+div[data-baseweb="calendar"] [role="gridcell"] button {{
   background:transparent !important;
   color:{WHITE} !important;
+  border-radius:6px !important;
+  transition:all 0.2s !important;
 }}
-[data-baseweb="calendar"] [aria-selected="true"] button {{
-  background:{BRAND} !important;
-  border-radius:50% !important;
-  color:{WHITE} !important;
-}}
-[data-baseweb="calendar"] [data-today="true"] button {{
-  border:1px solid {TEAL} !important;
-  border-radius:50% !important;
+/* Dia atual (Hoje) */
+div[data-baseweb="calendar"] [role="gridcell"] button[aria-current="date"],
+div[data-baseweb="calendar"] [data-today="true"] button {{
+  border:1px dashed {TEAL} !important;
   color:{TEAL} !important;
+  background:rgba(0, 206, 201, 0.1) !important;
 }}
-[data-baseweb="calendar"] button:hover {{
+/* Dia selecionado */
+div[data-baseweb="calendar"] [role="gridcell"] button[aria-selected="true"] {{
+  background:{BRAND} !important;
+  color:{WHITE} !important;
+  border:none !important;
+}}
+/* Hover nos dias normais */
+div[data-baseweb="calendar"] [role="gridcell"] button:hover {{
   background:{CARD2} !important;
-  border-radius:50% !important;
 }}
-[data-baseweb="calendar"] [data-baseweb="typography"] {{
+/* Dias de fora do mês atual (desativados/opacos) */
+div[data-baseweb="calendar"] [role="gridcell"] button[aria-disabled="true"],
+div[data-baseweb="calendar"] [role="gridcell"] button[aria-selected="false"][tabindex="-1"] {{
   color:{MUTED} !important;
+  opacity:0.4 !important;
 }}
-div[data-baseweb="popover"] {{
-  background:{CARD} !important;
-  border:1px solid {BORDER} !important;
-  border-radius:10px !important;
-}}
-div[data-baseweb="popover"] * {{
-  background:inherit;
-}}
-[data-baseweb="calendar"] svg {{ fill:{WHITE} !important; }}
 
 /* ── Botão ── */
 .stButton button {{
