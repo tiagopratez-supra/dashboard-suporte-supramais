@@ -91,7 +91,7 @@ li[role="option"][aria-selected="true"] {{ background:{CARD2} !important; color:
 [data-baseweb="tag"] span {{ color:{WHITE} !important; }}
 [data-baseweb="tag"] button svg {{ fill:{WHITE} !important; }}
 
-/* ── DATE INPUT — dark fix ── */
+/* ── DATE INPUT — campo principal ── */
 div[data-testid="stDateInput"] > div,
 div[data-testid="stDateInput"] [data-baseweb="base-input"],
 div[data-testid="stDateInput"] [data-baseweb="input"] {{
@@ -116,61 +116,78 @@ div[data-testid="stDateInput"] div[role="combobox"] {{
   -webkit-text-fill-color:{WHITE} !important;
 }}
 
-/* ── Calendário do date picker (NOVO MODELO LIMPO) ── */
-div[data-baseweb="popover"] > div {{
-  background:{CARD} !important;
-  border:1px solid {BORDER} !important;
-  border-radius:8px !important;
-  box-shadow: 0 8px 24px rgba(0,0,0,0.5) !important;
+/* ── CALENDÁRIO DO DATE PICKER (CORREÇÃO ABSOLUTA E MODELO LIMPO) ── */
+/* Remove qualquer fundo branco fantasma dentro da estrutura do calendário */
+div[data-baseweb="calendar"] * {{
+  background-color: transparent !important;
 }}
-div[data-baseweb="calendar"],
-div[data-baseweb="calendar"] > div {{
-  background:{CARD} !important;
+
+/* Aplica o fundo escuro e estilo no popover do calendário */
+div[data-baseweb="calendar"] {{
+  background-color: {CARD} !important;
+  padding: 8px !important;
+  border: 1px solid {BORDER} !important;
+  border-radius: 8px !important;
+  box-shadow: 0 8px 30px rgba(0,0,0,0.6) !important;
 }}
-/* Textos em geral dentro do calendário (Mês, Ano, Dias) */
-div[data-baseweb="calendar"] [data-baseweb="typography"] {{
-  color:{WHITE} !important;
-  font-weight:500 !important;
+
+/* Força cores nítidas e brancas para Mês, Ano e Setas */
+div[data-baseweb="calendar"] [data-baseweb="typography"],
+div[data-baseweb="calendar"] span {{
+  color: {WHITE} !important;
+  font-weight: 500 !important;
 }}
-/* Dias da semana (Su, Mo, Tu...) no cabeçalho */
-div[data-baseweb="calendar"] div[role="columnheader"] [data-baseweb="typography"] {{
-  color:{MUTED} !important;
-  font-size:0.75rem !important;
-  font-weight:700 !important;
-}}
-/* Setas de navegação */
 div[data-baseweb="calendar"] button svg {{
-  fill:{WHITE} !important;
+  fill: {WHITE} !important;
 }}
-/* Botões dos dias */
+
+/* Títulos das colunas: Dias da semana (Su, Mo, Tu...) */
+div[data-baseweb="calendar"] [role="columnheader"],
+div[data-baseweb="calendar"] [role="columnheader"] span {{
+  color: {MUTED} !important;
+  font-size: 0.75rem !important;
+  font-weight: 700 !important;
+}}
+
+/* Caixas dos números dos dias */
 div[data-baseweb="calendar"] [role="gridcell"] button {{
-  background:transparent !important;
-  color:{WHITE} !important;
-  border-radius:6px !important;
-  transition:all 0.2s !important;
+  color: {WHITE} !important;
+  border-radius: 6px !important;
+  transition: all 0.2s ease !important;
+  border: none !important;
 }}
-/* Dia atual (Hoje) */
-div[data-baseweb="calendar"] [role="gridcell"] button[aria-current="date"],
-div[data-baseweb="calendar"] [data-today="true"] button {{
-  border:1px dashed {TEAL} !important;
-  color:{TEAL} !important;
-  background:rgba(0, 206, 201, 0.1) !important;
-}}
-/* Dia selecionado */
-div[data-baseweb="calendar"] [role="gridcell"] button[aria-selected="true"] {{
-  background:{BRAND} !important;
-  color:{WHITE} !important;
-  border:none !important;
-}}
-/* Hover nos dias normais */
+
+/* Efeito Hover nos dias normais */
 div[data-baseweb="calendar"] [role="gridcell"] button:hover {{
-  background:{CARD2} !important;
+  background-color: {CARD2} !important;
 }}
-/* Dias de fora do mês atual (desativados/opacos) */
-div[data-baseweb="calendar"] [role="gridcell"] button[aria-disabled="true"],
-div[data-baseweb="calendar"] [role="gridcell"] button[aria-selected="false"][tabindex="-1"] {{
-  color:{MUTED} !important;
-  opacity:0.4 !important;
+
+/* Dia Atual (Hoje) */
+div[data-baseweb="calendar"] [aria-current="date"] button {{
+  border: 1px dashed {TEAL} !important;
+  background-color: rgba(0, 206, 201, 0.1) !important;
+  color: {TEAL} !important;
+  font-weight: bold !important;
+}}
+
+/* Dia Selecionado */
+div[data-baseweb="calendar"] [aria-selected="true"] button {{
+  background-color: {BRAND} !important;
+  color: {WHITE} !important;
+  font-weight: bold !important;
+}}
+
+/* Dias fora do mês atual (Inativos) */
+div[data-baseweb="calendar"] [aria-disabled="true"] button,
+div[data-baseweb="calendar"] [role="gridcell"] button[tabindex="-1"] {{
+  color: {MUTED} !important;
+  opacity: 0.3 !important;
+}}
+
+/* Oculta os painéis extras ou popovers brancos gerados no Streamlit mais novo */
+div[data-baseweb="popover"] > div {{
+  background: {CARD} !important;
+  border: none !important;
 }}
 
 /* ── Botão ── */
@@ -504,7 +521,6 @@ def aba_hoje(df_raw, hoje):
                 yaxis_title="", xaxis_title="",
                 legend=dict(orientation="h", y=1.12, x=0, title="", font=dict(color=WHITE, size=10))
             ))
-            # Ajusta a margem superior separadamente para não dar conflito
             fig.update_layout(margin=dict(t=35, b=8, l=6, r=6)) 
             
             st.plotly_chart(fig, use_container_width=True)
