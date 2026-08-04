@@ -1,5 +1,5 @@
 # =============================================================================
-# Central de Suporte — SupraMAIS  |  Command Center
+# Central de Suporte. — SupraMAIS  |  Command Center
 # Stack: Streamlit + pyodbc + pandas + plotly
 # =============================================================================
 
