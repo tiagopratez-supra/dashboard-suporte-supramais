@@ -116,47 +116,101 @@ div[data-testid="stDateInput"] div[role="combobox"] {{
   -webkit-text-fill-color:{WHITE} !important;
 }}
 
-/* ── CALENDÁRIO DO DATE PICKER — contraste e legibilidade ── */
-/* Popover e painel principal do calendário */
+/* ── CALENDÁRIO DO DATE PICKER — correção completa ── */
+/* Container externo e painel interno */
+div[data-baseweb="popover"]:has(div[data-baseweb="calendar"]),
 div[data-baseweb="popover"]:has(div[data-baseweb="calendar"]) > div,
-div[data-baseweb="calendar"] {{
+div[data-baseweb="calendar"],
+div[data-baseweb="calendar"] > div {{
   background:{CARD} !important;
+  background-color:{CARD} !important;
   color:{WHITE} !important;
-  border:1px solid {BORDER} !important;
-  border-radius:10px !important;
-  box-shadow:0 12px 34px rgba(0,0,0,.58) !important;
+  border-color:{BORDER} !important;
 }}
 
 div[data-baseweb="calendar"] {{
   padding:10px !important;
+  border:1px solid {BORDER} !important;
+  border-radius:10px !important;
+  box-shadow:0 12px 34px rgba(0,0,0,.58) !important;
+  overflow:hidden !important;
 }}
 
-/* Cabeçalho: mês, ano e botões de navegação */
-div[data-baseweb="calendar"] [data-baseweb="typography"],
+/* Remove todos os quadros brancos internos criados pelo BaseWeb */
+div[data-baseweb="calendar"] table,
+div[data-baseweb="calendar"] thead,
+div[data-baseweb="calendar"] tbody,
+div[data-baseweb="calendar"] tr,
+div[data-baseweb="calendar"] th,
+div[data-baseweb="calendar"] td,
+div[data-baseweb="calendar"] [role="grid"],
+div[data-baseweb="calendar"] [role="row"],
+div[data-baseweb="calendar"] [role="gridcell"],
+div[data-baseweb="calendar"] [role="gridcell"] > div,
+div[data-baseweb="calendar"] [role="gridcell"] > span {{
+  background:transparent !important;
+  background-color:transparent !important;
+  border-color:transparent !important;
+}}
+
+/* Cabeçalho, mês, ano e setas */
 div[data-baseweb="calendar"] header,
-div[data-baseweb="calendar"] header span,
-div[data-baseweb="calendar"] button {{
+div[data-baseweb="calendar"] header > div,
+div[data-baseweb="calendar"] [data-baseweb="typography"],
+div[data-baseweb="calendar"] [data-baseweb="typography"] *,
+div[data-baseweb="calendar"] [role="heading"],
+div[data-baseweb="calendar"] [role="heading"] *,
+div[data-baseweb="calendar"] select,
+div[data-baseweb="calendar"] option {{
+  background:{CARD} !important;
+  background-color:{CARD} !important;
   color:{WHITE} !important;
   -webkit-text-fill-color:{WHITE} !important;
+  opacity:1 !important;
+  font-weight:700 !important;
+}}
+
+/* Seletores do mês e do ano */
+div[data-baseweb="calendar"] [data-baseweb="select"],
+div[data-baseweb="calendar"] [data-baseweb="select"] > div,
+div[data-baseweb="calendar"] [data-baseweb="select"] div,
+div[data-baseweb="calendar"] [role="combobox"],
+div[data-baseweb="calendar"] [role="combobox"] * {{
+  background:{CARD2} !important;
+  background-color:{CARD2} !important;
+  color:{WHITE} !important;
+  -webkit-text-fill-color:{WHITE} !important;
+  border-color:{BORDER} !important;
+  opacity:1 !important;
 }}
 
 div[data-baseweb="calendar"] button {{
   background:transparent !important;
+  background-color:transparent !important;
+  color:{WHITE} !important;
+  -webkit-text-fill-color:{WHITE} !important;
+  border-color:transparent !important;
   border-radius:7px !important;
+  opacity:1 !important;
 }}
 
 div[data-baseweb="calendar"] button:hover {{
   background:{CARD2} !important;
+  background-color:{CARD2} !important;
 }}
 
-div[data-baseweb="calendar"] button svg {{
+div[data-baseweb="calendar"] button svg,
+div[data-baseweb="calendar"] svg {{
   fill:{WHITE} !important;
   color:{WHITE} !important;
+  opacity:1 !important;
 }}
 
 /* Dias da semana */
 div[data-baseweb="calendar"] [role="columnheader"],
 div[data-baseweb="calendar"] [role="columnheader"] * {{
+  background:{CARD} !important;
+  background-color:{CARD} !important;
   color:{MUTED} !important;
   -webkit-text-fill-color:{MUTED} !important;
   font-size:.75rem !important;
@@ -164,11 +218,9 @@ div[data-baseweb="calendar"] [role="columnheader"] * {{
   opacity:1 !important;
 }}
 
-/* Todos os números dos dias — cobre versões diferentes do BaseWeb */
+/* Todos os números dos dias */
 div[data-baseweb="calendar"] [role="gridcell"],
-div[data-baseweb="calendar"] [role="gridcell"] > div,
-div[data-baseweb="calendar"] [role="gridcell"] button,
-div[data-baseweb="calendar"] [role="gridcell"] span,
+div[data-baseweb="calendar"] [role="gridcell"] *,
 div[data-baseweb="calendar"] [aria-label*="Choose"],
 div[data-baseweb="calendar"] [aria-label*="Escolher"] {{
   color:{WHITE} !important;
@@ -177,26 +229,31 @@ div[data-baseweb="calendar"] [aria-label*="Escolher"] {{
   opacity:1 !important;
 }}
 
-/* Área clicável de cada dia */
+/* Cada célula de dia, inclusive células vazias das bordas */
+div[data-baseweb="calendar"] [role="gridcell"],
 div[data-baseweb="calendar"] [role="gridcell"] > div,
 div[data-baseweb="calendar"] [role="gridcell"] button {{
-  background:transparent !important;
+  background:{CARD} !important;
+  background-color:{CARD} !important;
   border:1px solid transparent !important;
   border-radius:7px !important;
-  transition:background-color .15s ease, border-color .15s ease !important;
 }}
 
+div[data-baseweb="calendar"] [role="gridcell"]:hover,
 div[data-baseweb="calendar"] [role="gridcell"] > div:hover,
 div[data-baseweb="calendar"] [role="gridcell"] button:hover {{
   background:{CARD2} !important;
+  background-color:{CARD2} !important;
   border-color:{BORDER} !important;
 }}
 
 /* Dia selecionado */
 div[data-baseweb="calendar"] [aria-selected="true"],
 div[data-baseweb="calendar"] [aria-selected="true"] > div,
-div[data-baseweb="calendar"] [aria-selected="true"] button {{
+div[data-baseweb="calendar"] [aria-selected="true"] button,
+div[data-baseweb="calendar"] button[aria-selected="true"] {{
   background:{BRAND} !important;
+  background-color:{BRAND} !important;
   color:#FFFFFF !important;
   -webkit-text-fill-color:#FFFFFF !important;
   border-color:{BRAND} !important;
@@ -214,24 +271,16 @@ div[data-baseweb="calendar"] [aria-current="date"] button {{
   font-weight:800 !important;
 }}
 
-/* Dias fora do mês e indisponíveis: visíveis, porém diferenciados */
+/* Dias fora do mês */
 div[data-baseweb="calendar"] [aria-disabled="true"],
 div[data-baseweb="calendar"] [aria-disabled="true"] *,
 div[data-baseweb="calendar"] [data-outside-month="true"],
 div[data-baseweb="calendar"] [data-outside-month="true"] * {{
+  background:{CARD} !important;
+  background-color:{CARD} !important;
   color:#607892 !important;
   -webkit-text-fill-color:#607892 !important;
   opacity:1 !important;
-}}
-
-/* Remove somente fundos claros internos sem apagar os destaques dos dias */
-div[data-baseweb="calendar"] table,
-div[data-baseweb="calendar"] thead,
-div[data-baseweb="calendar"] tbody,
-div[data-baseweb="calendar"] tr,
-div[data-baseweb="calendar"] th,
-div[data-baseweb="calendar"] td {{
-  background:transparent !important;
 }}
 
 /* ── Botão ── */
