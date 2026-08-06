@@ -153,20 +153,12 @@ div[data-baseweb="calendar"] [role="gridcell"] > span {{
   border-color:transparent !important;
 }}
 
-/* Cabeçalho, mês, ano e setas */
-div[data-baseweb="calendar"] header,
-div[data-baseweb="calendar"] header > div,
-div[data-baseweb="calendar"] [data-baseweb="typography"],
-div[data-baseweb="calendar"] [data-baseweb="typography"] *,
-div[data-baseweb="calendar"] [role="heading"],
-div[data-baseweb="calendar"] [role="heading"] *,
-div[data-baseweb="calendar"] select,
-div[data-baseweb="calendar"] option {{
-  background:{CARD} !important;
-  background-color:{CARD} !important;
+/* ── CORREÇÃO: Cabeçalho (Mês e Ano) ── */
+div[data-baseweb="calendar"] header span,
+div[data-baseweb="calendar"] header div,
+div[data-baseweb="calendar"] header [data-baseweb="typography"] {{
   color:{WHITE} !important;
   -webkit-text-fill-color:{WHITE} !important;
-  opacity:1 !important;
   font-weight:700 !important;
 }}
 
@@ -229,18 +221,15 @@ div[data-baseweb="calendar"] [aria-label*="Escolher"] {{
   opacity:1 !important;
 }}
 
-/* Cada célula de dia, inclusive células vazias das bordas */
-div[data-baseweb="calendar"] [role="gridcell"],
-div[data-baseweb="calendar"] [role="gridcell"] > div,
+/* ── CORREÇÃO: Dias normais ── */
 div[data-baseweb="calendar"] [role="gridcell"] button {{
   background:{CARD} !important;
   background-color:{CARD} !important;
   border:1px solid transparent !important;
   border-radius:7px !important;
+  color:{WHITE} !important;
 }}
 
-div[data-baseweb="calendar"] [role="gridcell"]:hover,
-div[data-baseweb="calendar"] [role="gridcell"] > div:hover,
 div[data-baseweb="calendar"] [role="gridcell"] button:hover {{
   background:{CARD2} !important;
   background-color:{CARD2} !important;
@@ -248,9 +237,6 @@ div[data-baseweb="calendar"] [role="gridcell"] button:hover {{
 }}
 
 /* Dia selecionado */
-div[data-baseweb="calendar"] [aria-selected="true"],
-div[data-baseweb="calendar"] [aria-selected="true"] > div,
-div[data-baseweb="calendar"] [aria-selected="true"] button,
 div[data-baseweb="calendar"] button[aria-selected="true"] {{
   background:{BRAND} !important;
   background-color:{BRAND} !important;
@@ -258,29 +244,27 @@ div[data-baseweb="calendar"] button[aria-selected="true"] {{
   -webkit-text-fill-color:#FFFFFF !important;
   border-color:{BRAND} !important;
   font-weight:800 !important;
-  opacity:1 !important;
 }}
 
 /* Dia atual */
-div[data-baseweb="calendar"] [aria-current="date"],
-div[data-baseweb="calendar"] [aria-current="date"] > div,
-div[data-baseweb="calendar"] [aria-current="date"] button {{
+div[data-baseweb="calendar"] button[aria-current="date"] {{
   color:{TEAL} !important;
   -webkit-text-fill-color:{TEAL} !important;
   border-color:{TEAL} !important;
   font-weight:800 !important;
 }}
 
-/* Dias fora do mês */
-div[data-baseweb="calendar"] [aria-disabled="true"],
-div[data-baseweb="calendar"] [aria-disabled="true"] *,
-div[data-baseweb="calendar"] [data-outside-month="true"],
-div[data-baseweb="calendar"] [data-outside-month="true"] * {{
-  background:{CARD} !important;
-  background-color:{CARD} !important;
-  color:#607892 !important;
-  -webkit-text-fill-color:#607892 !important;
-  opacity:1 !important;
+/* ── CORREÇÃO: Remover os quadrados brancos (Células vazias e dias fora do mês) ── */
+div[data-baseweb="calendar"] [role="gridcell"]:empty,
+div[data-baseweb="calendar"] [role="gridcell"]:not(:has(button)),
+div[data-baseweb="calendar"] button[aria-disabled="true"],
+div[data-baseweb="calendar"] button[data-outside-month="true"] {{
+  background:transparent !important;
+  background-color:transparent !important;
+  border:none !important;
+  color:#4A5C73 !important;
+  -webkit-text-fill-color:#4A5C73 !important;
+  pointer-events:none !important;
 }}
 
 /* ── Botão ── */
