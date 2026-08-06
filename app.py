@@ -318,9 +318,10 @@ div[data-baseweb="calendar"] [data-outside-month="true"] * {{
 /* ── KPI grid ── */
 .kpi-grid {{
   display:grid;
-  grid-template-columns:repeat(6,1fr);
+  grid-template-columns:repeat(7,1fr);
   gap:10px; margin-bottom:14px;
 }}
+@media(max-width:1200px) {{ .kpi-grid {{ grid-template-columns:repeat(4,1fr); }} }}
 @media(max-width:900px)  {{ .kpi-grid {{ grid-template-columns:repeat(3,1fr); }} }}
 @media(max-width:600px)  {{ .kpi-grid {{ grid-template-columns:repeat(2,1fr); }} }}
 @media(max-width:380px)  {{ .kpi-grid {{ grid-template-columns:1fr; }} }}
@@ -571,8 +572,11 @@ def aba_hoje(df_raw, hoje):
     
     # >= 0 em vez de > 0
     tmr_h_v = df_sol_h[df_sol_h["TMR_h"] >= 0]["TMR_h"].mean()
+    
+    # Contagem de clientes diferentes atendidos hoje
+    clientes_hj = df_h["Cliente"].nunique()
 
-    # KPIs do dia
+    # KPIs do dia (agora com 7 colunas)
     st.markdown(f"""
     <div class="kpi-grid">
       {kpi("Abertos Hoje",      f"{ab_h}",       "novos chamados hoje",      "📥", BRAND)}
@@ -585,6 +589,8 @@ def aba_hoje(df_raw, hoje):
       {kpi("Backlog Total",     f"{backlog:,}",  "ainda sem solução",        "🗂️", ORANGE if backlog>50 else GREEN,
            tip_text="Fila de pendências: total de chamados abertos sem data de solução, independente do período.")}
       {kpi("Ativos Hoje",       str(df_h["Atendente"].nunique()), "atendentes com chamados", "👥", TEAL)}
+      {kpi("Clientes Hoje",     f"{clientes_hj}", "atendidos hoje",         "🏢", PURPLE,
+           tip_text="Quantidade de clientes distintos que abriram chamados na data de hoje.")}
     </div>
     """, unsafe_allow_html=True)
 
@@ -596,15 +602,16 @@ def aba_hoje(df_raw, hoje):
         </div>""", unsafe_allow_html=True)
         return
 
-    c1, c2, c3 = st.columns([2, 2, 1])
+    # Linha 1: Gráficos de Atendentes (Canal e Módulo)
+    r1c1, r1c2 = st.columns(2)
 
-    with c1:
+    with r1c1:
         try:
             st.markdown(co("📊 Atendimentos Hoje: Atendente × Canal"), unsafe_allow_html=True)
             df_at_or = df_h.groupby(["Atendente", "Origem"]).size().reset_index(name="Qtd")
             
-            # Ordenar atendentes pelo total de chamados para manter o gráfico alinhado e organizado
-            ordem_at = df_at_or.groupby("Atendente")["Qtd"].sum().sort_values().index.tolist()
+            # Ordenar atendentes pelo total de chamados
+            ordem_at = df_h.groupby("Atendente").size().sort_values().index.tolist()
             
             fig = px.bar(df_at_or, y="Atendente", x="Qtd", color="Origem", orientation="h", text="Qtd",
                          category_orders={"Atendente": ordem_at},
@@ -624,9 +631,44 @@ def aba_hoje(df_raw, hoje):
             st.markdown(cc(), unsafe_allow_html=True)
             st.warning(f"Gráfico indisponível: {e}")
 
-    with c2:
+    with r1c2:
         try:
-            st.markdown(co("🎯 Motivos — Hoje"), unsafe_allow_html=True)
+            st.markdown(co("🧩 Atendimentos Hoje: Atendente × Módulo"), unsafe_allow_html=True)
+            df_at_mod = df_h.groupby(["Atendente", "Modulo"]).size().reset_index(name="Qtd")
+            
+            fig_mod = px.bar(df_at_mod, y="Atendente", x="Qtd", color="Modulo", orientation="h", text="Qtd",
+                         category_orders={"Atendente": ordem_at},
+                         color_discrete_sequence=CORES, barmode="stack")
+            
+            fig_mod.update_traces(textposition="inside", textfont=dict(size=11, color=WHITE), insidetextanchor="middle")
+            fig_mod.update_layout(**pb(max(240, len(ordem_at)*35),
+                xaxis=dict(showgrid=False), yaxis=dict(showgrid=False),
+                yaxis_title="", xaxis_title="",
+                legend=dict(orientation="h", y=1.12, x=0, title="", font=dict(color=WHITE, size=10))
+            ))
+            fig_mod.update_layout(margin=dict(t=35, b=8, l=6, r=6)) 
+            
+            st.plotly_chart(fig_mod, use_container_width=True)
+            st.markdown(cc(), unsafe_allow_html=True)
+        except Exception as e:
+            st.markdown(cc(), unsafe_allow_html=True)
+            st.warning(f"Gráfico indisponível: {e}")
+
+    # Linha 2: Top Clientes, Motivos, Origem e Situação
+    r2c1, r2c2, r2c3 = st.columns([1.5, 1.5, 1])
+
+    with r2c1:
+        st.markdown(co("🏆 Top 10 Clientes — Hoje"), unsafe_allow_html=True)
+        dr_h = df_h.groupby("Cliente").size().reset_index(name="Total").sort_values("Total", ascending=False).head(10)
+        if not dr_h.empty:
+            st.markdown(rank_html(dr_h, "Cliente", "Total", TEAL), unsafe_allow_html=True)
+        else:
+            st.markdown("<div style='padding:20px;color:#8BA3BF'>Nenhum cliente ainda.</div>", unsafe_allow_html=True)
+        st.markdown(cc(), unsafe_allow_html=True)
+
+    with r2c2:
+        try:
+            st.markdown(co("🎯 Principais Motivos — Hoje"), unsafe_allow_html=True)
             df_mot_h = df_h.groupby("Motivo").size().reset_index(name="Qtd").nlargest(8,"Qtd").sort_values("Qtd")
             fig2 = px.bar(df_mot_h, y="Motivo", x="Qtd", orientation="h", text="Qtd",
                            color="Qtd", color_continuous_scale=[[0,CARD2],[1,BRAND]])
@@ -642,7 +684,7 @@ def aba_hoje(df_raw, hoje):
             st.markdown(cc(), unsafe_allow_html=True)
             st.warning(f"Gráfico indisponível: {e}")
 
-    with c3:
+    with r2c3:
         try:
             st.markdown(co("📡 Origem — Hoje"), unsafe_allow_html=True)
             df_or_h = df_h.groupby("Origem").size().reset_index(name="Qtd")
@@ -650,15 +692,13 @@ def aba_hoje(df_raw, hoje):
                            color_discrete_sequence=CORES)
             fig3.update_traces(textposition="inside", textinfo="percent+label",
                                 textfont=dict(size=10, color=WHITE))
-            fig3.update_layout(**pb(220, showlegend=False))
+            fig3.update_layout(**pb(200, showlegend=False))
             st.plotly_chart(fig3, use_container_width=True)
             st.markdown(cc(), unsafe_allow_html=True)
         except Exception as e:
             st.markdown(cc(), unsafe_allow_html=True)
             st.warning(f"Gráfico indisponível: {e}")
 
-    c4, c5 = st.columns(2)
-    with c4:
         try:
             st.markdown(co("🔵 Situação — Hoje"), unsafe_allow_html=True)
             df_sit_h = df_h.groupby("Situacao").size().reset_index(name="Qtd")
@@ -666,38 +706,12 @@ def aba_hoje(df_raw, hoje):
                            color_discrete_sequence=CORES)
             fig4.update_traces(textposition="outside", textinfo="label+percent",
                                 textfont=dict(size=10, color=WHITE))
-            fig4.update_layout(**pb(240, showlegend=False))
+            fig4.update_layout(**pb(200, showlegend=False))
             st.plotly_chart(fig4, use_container_width=True)
             st.markdown(cc(), unsafe_allow_html=True)
         except Exception as e:
             st.markdown(cc(), unsafe_allow_html=True)
             st.warning(f"Gráfico indisponível: {e}")
-
-    with c5:
-        try:
-            st.markdown(co("🧩 Módulos — Hoje"), unsafe_allow_html=True)
-            df_mod_h = df_h.groupby("Modulo").size().reset_index(name="Qtd").nlargest(8,"Qtd").sort_values("Qtd")
-            fig5 = px.bar(df_mod_h, y="Modulo", x="Qtd", orientation="h", text="Qtd",
-                           color="Qtd", color_continuous_scale=[[0,CARD2],[1,PURPLE]])
-            fig5.update_coloraxes(showscale=False)
-            fig5.update_traces(textposition="outside", cliponaxis=False,
-                                textfont=dict(color=WHITE))
-            fig5.update_layout(**pb(max(200, len(df_mod_h)*32),
-                xaxis=dict(showgrid=False), yaxis=dict(showgrid=False),
-                yaxis_title="", xaxis_title=""))
-            st.plotly_chart(fig5, use_container_width=True)
-            st.markdown(cc(), unsafe_allow_html=True)
-        except Exception as e:
-            st.markdown(cc(), unsafe_allow_html=True)
-            st.warning(f"Gráfico indisponível: {e}")
-
-    st.markdown('<span class="sec-t">📋 Lista de Chamados Abertos Hoje</span>', unsafe_allow_html=True)
-    cols_show = ["Sac","Cliente","Contato","Atendente","Modulo","Situacao","Origem","Assunto"]
-    cols_disp = [c for c in cols_show if c in df_h.columns]
-    st.dataframe(
-        df_h[cols_disp].reset_index(drop=True),
-        width="stretch", height=260,
-    )
 
 
 # ══════════════════════════════════════════════════════════════════════════════
