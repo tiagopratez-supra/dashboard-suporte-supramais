@@ -214,58 +214,71 @@ div[data-baseweb="calendar"] [role="columnheader"] * {{
 div[data-baseweb="calendar"] [role="gridcell"],
 div[data-baseweb="calendar"] [role="gridcell"] *,
 div[data-baseweb="calendar"] [aria-label*="Choose"],
-div[data-baseweb="calendar"] [aria-label*="Escolher"] {{
-  color:{WHITE} !important;
-  -webkit-text-fill-color:{WHITE} !important;
-  font-weight:600 !important;
-  opacity:1 !important;
-}}
+div[data-baseweb="calendar"] [aria-label*="Escolher"] {
+  color: {WHITE} !important;
+  -webkit-text-fill-color: {WHITE} !important;
+  font-weight: 600 !important;
+  opacity: 1 !important;
+}
+
+/* ── TRADUÇÃO FORÇADA: Dias da Semana (CSS Hack) ── */
+div[data-baseweb="calendar"] [role="columnheader"] { font-size: 0 !important; }
+div[data-baseweb="calendar"] [role="columnheader"]:nth-child(1)::after { content: "Dom"; font-size: .75rem; }
+div[data-baseweb="calendar"] [role="columnheader"]:nth-child(2)::after { content: "Seg"; font-size: .75rem; }
+div[data-baseweb="calendar"] [role="columnheader"]:nth-child(3)::after { content: "Ter"; font-size: .75rem; }
+div[data-baseweb="calendar"] [role="columnheader"]:nth-child(4)::after { content: "Qua"; font-size: .75rem; }
+div[data-baseweb="calendar"] [role="columnheader"]:nth-child(5)::after { content: "Qui"; font-size: .75rem; }
+div[data-baseweb="calendar"] [role="columnheader"]:nth-child(6)::after { content: "Sex"; font-size: .75rem; }
+div[data-baseweb="calendar"] [role="columnheader"]:nth-child(7)::after { content: "Sáb"; font-size: .75rem; }
+
+/* ── CORREÇÃO: Remover os quadrados escuros do fundo ── */
+div[data-baseweb="calendar"] [role="gridcell"] {
+  background: transparent !important;
+  border: none !important;
+}
 
 /* ── CORREÇÃO: Dias normais ── */
-div[data-baseweb="calendar"] [role="gridcell"] button {{
-  background:{CARD} !important;
-  background-color:{CARD} !important;
-  border:1px solid transparent !important;
-  border-radius:7px !important;
-  color:{WHITE} !important;
-}}
+div[data-baseweb="calendar"] [role="gridcell"] button {
+  background: transparent !important; 
+  border: 1px solid transparent !important;
+  border-radius: 7px !important;
+  color: {WHITE} !important;
+}
 
-div[data-baseweb="calendar"] [role="gridcell"] button:hover {{
-  background:{CARD2} !important;
-  background-color:{CARD2} !important;
-  border-color:{BORDER} !important;
-}}
+div[data-baseweb="calendar"] [role="gridcell"] button:hover {
+  background: {CARD2} !important;
+  background-color: {CARD2} !important;
+  border-color: {BORDER} !important;
+}
+
+/* ── CORREÇÃO: Dias fora do mês atual (esmaecidos) ── */
+div[data-baseweb="calendar"] [aria-disabled="true"],
+div[data-baseweb="calendar"] button[aria-disabled="true"],
+div[data-baseweb="calendar"] [data-outside-month="true"],
+div[data-baseweb="calendar"] button[data-outside-month="true"] {
+  color: rgba(232, 244, 253, 0.25) !important; /* Branco com 25% de opacidade */
+  -webkit-text-fill-color: rgba(232, 244, 253, 0.25) !important;
+  background: transparent !important;
+  pointer-events: none !important; /* Impede clique */
+}
 
 /* Dia selecionado */
-div[data-baseweb="calendar"] button[aria-selected="true"] {{
-  background:{BRAND} !important;
-  background-color:{BRAND} !important;
-  color:#FFFFFF !important;
-  -webkit-text-fill-color:#FFFFFF !important;
-  border-color:{BRAND} !important;
-  font-weight:800 !important;
-}}
+div[data-baseweb="calendar"] button[aria-selected="true"] {
+  background: {BRAND} !important;
+  background-color: {BRAND} !important;
+  color: #FFFFFF !important;
+  -webkit-text-fill-color: #FFFFFF !important;
+  border-color: {BRAND} !important;
+  font-weight: 800 !important;
+}
 
 /* Dia atual */
-div[data-baseweb="calendar"] button[aria-current="date"] {{
-  color:{TEAL} !important;
-  -webkit-text-fill-color:{TEAL} !important;
-  border-color:{TEAL} !important;
-  font-weight:800 !important;
-}}
-
-/* ── CORREÇÃO: Remover os quadrados brancos (Células vazias e dias fora do mês) ── */
-div[data-baseweb="calendar"] [role="gridcell"]:empty,
-div[data-baseweb="calendar"] [role="gridcell"]:not(:has(button)),
-div[data-baseweb="calendar"] button[aria-disabled="true"],
-div[data-baseweb="calendar"] button[data-outside-month="true"] {{
-  background:transparent !important;
-  background-color:transparent !important;
-  border:none !important;
-  color:#4A5C73 !important;
-  -webkit-text-fill-color:#4A5C73 !important;
-  pointer-events:none !important;
-}}
+div[data-baseweb="calendar"] button[aria-current="date"] {
+  color: {TEAL} !important;
+  -webkit-text-fill-color: {TEAL} !important;
+  border-color: {TEAL} !important;
+  font-weight: 800 !important;
+}
 
 /* ── Botão ── */
 .stButton button {{
