@@ -602,7 +602,10 @@ def aba_hoje(df_raw, hoje):
         </div>""", unsafe_allow_html=True)
         return
 
-    # Linha 1: Gráficos de Atendentes (Canal e Módulo)
+    # Preparar base unificada de total por atendente
+    tot_ag = df_h.groupby("Atendente").size()
+
+    # Linha 1: Gráficos de Atendentes (Canal e Módulo - Mapa de Calor)
     r1c1, r1c2 = st.columns(2)
 
     with r1c1:
@@ -610,15 +613,18 @@ def aba_hoje(df_raw, hoje):
             st.markdown(co("📊 Atendimentos Hoje: Atendente × Canal"), unsafe_allow_html=True)
             df_at_or = df_h.groupby(["Atendente", "Origem"]).size().reset_index(name="Qtd")
             
-            # Ordenar atendentes pelo total de chamados
-            ordem_at = df_h.groupby("Atendente").size().sort_values().index.tolist()
+            # Adiciona o total ao lado do nome do atendente
+            df_at_or["Atendente_Lbl"] = df_at_or["Atendente"].apply(lambda x: f"{x} [{tot_ag[x]}]")
             
-            fig = px.bar(df_at_or, y="Atendente", x="Qtd", color="Origem", orientation="h", text="Qtd",
-                         category_orders={"Atendente": ordem_at},
+            # Ordenar atendentes pelo total de chamados para manter o gráfico alinhado
+            ordem_lbl = [f"{x} [{tot_ag[x]}]" for x in tot_ag.sort_values().index.tolist()]
+            
+            fig = px.bar(df_at_or, y="Atendente_Lbl", x="Qtd", color="Origem", orientation="h", text="Qtd",
+                         category_orders={"Atendente_Lbl": ordem_lbl},
                          color_discrete_sequence=CORES, barmode="stack")
             
             fig.update_traces(textposition="inside", textfont=dict(size=11, color=WHITE), insidetextanchor="middle")
-            fig.update_layout(**pb(max(240, len(ordem_at)*35),
+            fig.update_layout(**pb(max(240, len(ordem_lbl)*35),
                 xaxis=dict(showgrid=False), yaxis=dict(showgrid=False),
                 yaxis_title="", xaxis_title="",
                 legend=dict(orientation="h", y=1.12, x=0, title="", font=dict(color=WHITE, size=10))
@@ -633,20 +639,29 @@ def aba_hoje(df_raw, hoje):
 
     with r1c2:
         try:
-            st.markdown(co("🧩 Atendimentos Hoje: Atendente × Módulo"), unsafe_allow_html=True)
-            df_at_mod = df_h.groupby(["Atendente", "Modulo"]).size().reset_index(name="Qtd")
+            st.markdown(co("🧩 Mapa de Calor Hoje: Atendente × Módulo"), unsafe_allow_html=True)
+            top_mod_h = df_h["Modulo"].value_counts().nlargest(5).index
+            df_hm = df_h.copy()
+            df_hm["Mod_x"] = df_hm["Modulo"].apply(lambda x: x if x in top_mod_h else "Outros")
             
-            fig_mod = px.bar(df_at_mod, y="Atendente", x="Qtd", color="Modulo", orientation="h", text="Qtd",
-                         category_orders={"Atendente": ordem_at},
-                         color_discrete_sequence=CORES, barmode="stack")
+            # Aplica a mesma regra de rótulo para alinhar perfeitamente com o gráfico ao lado
+            df_hm["Atendente_Lbl"] = df_hm["Atendente"].apply(lambda x: f"{x} [{tot_ag[x]}]")
             
-            fig_mod.update_traces(textposition="inside", textfont=dict(size=11, color=WHITE), insidetextanchor="middle")
-            fig_mod.update_layout(**pb(max(240, len(ordem_at)*35),
-                xaxis=dict(showgrid=False), yaxis=dict(showgrid=False),
-                yaxis_title="", xaxis_title="",
-                legend=dict(orientation="h", y=1.12, x=0, title="", font=dict(color=WHITE, size=10))
+            piv_h = df_hm.groupby(["Atendente_Lbl", "Mod_x"]).size().reset_index(name="Qtd")\
+                      .pivot(index="Atendente_Lbl", columns="Mod_x", values="Qtd").fillna(0)
+            
+            # Reordena o índice para bater exatamente com as barras ao lado
+            piv_h = piv_h.reindex(ordem_lbl).fillna(0)
+            
+            fig_mod = px.imshow(piv_h, text_auto=True, aspect="auto",
+                                color_continuous_scale=[[0,CARD2],[0.5,CARD],[1,PURPLE]])
+            fig_mod.update_coloraxes(showscale=False)
+            fig_mod.update_traces(textfont=dict(color=WHITE))
+            fig_mod.update_layout(**pb(max(240, len(ordem_lbl)*35),
+                xaxis_title="", yaxis_title="",
+                xaxis=dict(side="top") # Coloca os nomes dos módulos no topo para não disputar espaço
             ))
-            fig_mod.update_layout(margin=dict(t=35, b=8, l=6, r=6)) 
+            fig_mod.update_layout(margin=dict(t=35, b=8, l=6, r=6))
             
             st.plotly_chart(fig_mod, use_container_width=True)
             st.markdown(cc(), unsafe_allow_html=True)
