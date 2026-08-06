@@ -4,7 +4,6 @@
 # =============================================================================
 
 import streamlit as st
-import streamlit.components.v1 as components
 import pandas as pd
 import pymssql
 import plotly.express as px
@@ -12,6 +11,8 @@ import plotly.graph_objects as go
 from datetime import date, datetime, timedelta
 from zoneinfo import ZoneInfo
 import os, warnings
+import calendar
+
 warnings.filterwarnings("ignore")
 
 st.set_page_config(
@@ -20,7 +21,7 @@ st.set_page_config(
     layout="wide",
     initial_sidebar_state="collapsed",
 )
-components.html('<script>setTimeout(()=>window.parent.location.reload(),1800000)</script>', height=0)
+st.html('<script>setTimeout(()=>window.parent.location.reload(),1800000)</script>')
 
 # ── PALETA ─────────────────────────────────────────────────────────────────────
 BG     = "#0D1B2A"
@@ -117,41 +118,26 @@ div[data-testid="stDateInput"] div[role="combobox"] {{
 }}
 
 /* ── CALENDÁRIO DO DATE PICKER — correção completa ── */
-
 /* Container externo e painel interno */
 div[data-baseweb="popover"]:has(div[data-baseweb="calendar"]),
 div[data-baseweb="popover"]:has(div[data-baseweb="calendar"]) > div,
 div[data-baseweb="calendar"],
 div[data-baseweb="calendar"] > div {{
-  background: {CARD} !important;
-  background-color: {CARD} !important;
-  color: {WHITE} !important;
-  border-color: {BORDER} !important;
+  background:{CARD} !important;
+  background-color:{CARD} !important;
+  color:{WHITE} !important;
+  border-color:{BORDER} !important;
 }}
 
 div[data-baseweb="calendar"] {{
-  padding: 10px !important;
-  border: 1px solid {BORDER} !important;
-  border-radius: 10px !important;
-  box-shadow: 0 12px 34px rgba(0,0,0,.58) !important;
-  overflow: hidden !important;
+  padding:10px !important;
+  border:1px solid {BORDER} !important;
+  border-radius:10px !important;
+  box-shadow:0 12px 34px rgba(0,0,0,.58) !important;
+  overflow:hidden !important;
 }}
 
-/* ── 1. CABEÇALHO (MÊS/ANO E SETAS) ── */
-div[data-baseweb="calendar"] header span,
-div[data-baseweb="calendar"] header div,
-div[data-baseweb="calendar"] header [data-baseweb="typography"],
-div[data-baseweb="calendar"] [role="heading"],
-div[data-baseweb="calendar"] [data-baseweb="select"] div,
-div[data-baseweb="calendar"] [role="combobox"] * {{
-  background: transparent !important;
-  color: {WHITE} !important;
-  -webkit-text-fill-color: {WHITE} !important;
-  font-weight: 700 !important;
-}}
-div[data-baseweb="calendar"] button svg {{ fill: {WHITE} !important; }}
-
-/* ── 2. LIMPEZA TOTAL DE FUNDOS DA GRADE ── */
+/* Remove todos os quadros brancos internos criados pelo BaseWeb */
 div[data-baseweb="calendar"] table,
 div[data-baseweb="calendar"] thead,
 div[data-baseweb="calendar"] tbody,
@@ -162,61 +148,141 @@ div[data-baseweb="calendar"] [role="grid"],
 div[data-baseweb="calendar"] [role="row"],
 div[data-baseweb="calendar"] [role="gridcell"],
 div[data-baseweb="calendar"] [role="gridcell"] > div,
-div[data-baseweb="calendar"] [role="gridcell"] button {{
-  background: transparent !important;
-  background-color: transparent !important;
-  border: none !important;
+div[data-baseweb="calendar"] [role="gridcell"] > span {{
+  background:transparent !important;
+  background-color:transparent !important;
+  border-color:transparent !important;
 }}
 
-/* ── 3. ESTILO APENAS DOS DIAS VÁLIDOS ── */
-div[data-baseweb="calendar"] [role="gridcell"] button {{
-  color: {WHITE} !important;
-  -webkit-text-fill-color: {WHITE} !important;
-  border-radius: 7px !important;
-  font-weight: 600 !important;
-}}
-div[data-baseweb="calendar"] [role="gridcell"] button:hover {{
-  background-color: {CARD2} !important;
-}}
-div[data-baseweb="calendar"] button[aria-selected="true"] {{
-  background-color: {BRAND} !important;
-  color: #FFFFFF !important;
-  -webkit-text-fill-color: #FFFFFF !important;
-  font-weight: 800 !important;
-}}
-div[data-baseweb="calendar"] button[aria-current="date"] {{
-  color: {TEAL} !important;
-  -webkit-text-fill-color: {TEAL} !important;
-  font-weight: 800 !important;
+/* Cabeçalho, mês, ano e setas */
+div[data-baseweb="calendar"] header,
+div[data-baseweb="calendar"] header > div,
+div[data-baseweb="calendar"] [data-baseweb="typography"],
+div[data-baseweb="calendar"] [data-baseweb="typography"] *,
+div[data-baseweb="calendar"] [role="heading"],
+div[data-baseweb="calendar"] [role="heading"] *,
+div[data-baseweb="calendar"] select,
+div[data-baseweb="calendar"] option {{
+  background:{CARD} !important;
+  background-color:{CARD} !important;
+  color:{WHITE} !important;
+  -webkit-text-fill-color:{WHITE} !important;
+  opacity:1 !important;
+  font-weight:700 !important;
 }}
 
-/* ── 4. OCULTAR QUADRADOS VAZIOS DOS OUTROS MESES ── */
-div[data-baseweb="calendar"] [role="gridcell"]:empty,
-div[data-baseweb="calendar"] [role="gridcell"] > div:empty,
-div[data-baseweb="calendar"] button[aria-disabled="true"],
-div[data-baseweb="calendar"] [data-outside-month="true"] {{
-  opacity: 0 !important; 
-  pointer-events: none !important;
+/* Seletores do mês e do ano */
+div[data-baseweb="calendar"] [data-baseweb="select"],
+div[data-baseweb="calendar"] [data-baseweb="select"] > div,
+div[data-baseweb="calendar"] [data-baseweb="select"] div,
+div[data-baseweb="calendar"] [role="combobox"],
+div[data-baseweb="calendar"] [role="combobox"] * {{
+  background:{CARD2} !important;
+  background-color:{CARD2} !important;
+  color:{WHITE} !important;
+  -webkit-text-fill-color:{WHITE} !important;
+  border-color:{BORDER} !important;
+  opacity:1 !important;
 }}
 
-/* ── 5. TRADUÇÃO FORÇADA DOS DIAS DA SEMANA ── */
+div[data-baseweb="calendar"] button {{
+  background:transparent !important;
+  background-color:transparent !important;
+  color:{WHITE} !important;
+  -webkit-text-fill-color:{WHITE} !important;
+  border-color:transparent !important;
+  border-radius:7px !important;
+  opacity:1 !important;
+}}
+
+div[data-baseweb="calendar"] button:hover {{
+  background:{CARD2} !important;
+  background-color:{CARD2} !important;
+}}
+
+div[data-baseweb="calendar"] button svg,
+div[data-baseweb="calendar"] svg {{
+  fill:{WHITE} !important;
+  color:{WHITE} !important;
+  opacity:1 !important;
+}}
+
+/* Dias da semana */
+div[data-baseweb="calendar"] [role="columnheader"],
 div[data-baseweb="calendar"] [role="columnheader"] * {{
-  display: none !important; /* Esconde as letras originais (Su, Mo...) */
+  background:{CARD} !important;
+  background-color:{CARD} !important;
+  color:{MUTED} !important;
+  -webkit-text-fill-color:{MUTED} !important;
+  font-size:.75rem !important;
+  font-weight:700 !important;
+  opacity:1 !important;
 }}
-div[data-baseweb="calendar"] [role="columnheader"]::after {{
-  font-size: 0.75rem !important;
-  color: {MUTED} !important;
-  font-weight: 700 !important;
-  display: block;
-  text-align: center;
+
+/* Todos os números dos dias */
+div[data-baseweb="calendar"] [role="gridcell"],
+div[data-baseweb="calendar"] [role="gridcell"] *,
+div[data-baseweb="calendar"] [aria-label*="Choose"],
+div[data-baseweb="calendar"] [aria-label*="Escolher"] {{
+  color:{WHITE} !important;
+  -webkit-text-fill-color:{WHITE} !important;
+  font-weight:600 !important;
+  opacity:1 !important;
 }}
-div[data-baseweb="calendar"] [role="columnheader"]:nth-child(1)::after {{ content: "Dom"; }}
-div[data-baseweb="calendar"] [role="columnheader"]:nth-child(2)::after {{ content: "Seg"; }}
-div[data-baseweb="calendar"] [role="columnheader"]:nth-child(3)::after {{ content: "Ter"; }}
-div[data-baseweb="calendar"] [role="columnheader"]:nth-child(4)::after {{ content: "Qua"; }}
-div[data-baseweb="calendar"] [role="columnheader"]:nth-child(5)::after {{ content: "Qui"; }}
-div[data-baseweb="calendar"] [role="columnheader"]:nth-child(6)::after {{ content: "Sex"; }}
-div[data-baseweb="calendar"] [role="columnheader"]:nth-child(7)::after {{ content: "Sáb"; }}
+
+/* Cada célula de dia, inclusive células vazias das bordas */
+div[data-baseweb="calendar"] [role="gridcell"],
+div[data-baseweb="calendar"] [role="gridcell"] > div,
+div[data-baseweb="calendar"] [role="gridcell"] button {{
+  background:{CARD} !important;
+  background-color:{CARD} !important;
+  border:1px solid transparent !important;
+  border-radius:7px !important;
+}}
+
+div[data-baseweb="calendar"] [role="gridcell"]:hover,
+div[data-baseweb="calendar"] [role="gridcell"] > div:hover,
+div[data-baseweb="calendar"] [role="gridcell"] button:hover {{
+  background:{CARD2} !important;
+  background-color:{CARD2} !important;
+  border-color:{BORDER} !important;
+}}
+
+/* Dia selecionado */
+div[data-baseweb="calendar"] [aria-selected="true"],
+div[data-baseweb="calendar"] [aria-selected="true"] > div,
+div[data-baseweb="calendar"] [aria-selected="true"] button,
+div[data-baseweb="calendar"] button[aria-selected="true"] {{
+  background:{BRAND} !important;
+  background-color:{BRAND} !important;
+  color:#FFFFFF !important;
+  -webkit-text-fill-color:#FFFFFF !important;
+  border-color:{BRAND} !important;
+  font-weight:800 !important;
+  opacity:1 !important;
+}}
+
+/* Dia atual */
+div[data-baseweb="calendar"] [aria-current="date"],
+div[data-baseweb="calendar"] [aria-current="date"] > div,
+div[data-baseweb="calendar"] [aria-current="date"] button {{
+  color:{TEAL} !important;
+  -webkit-text-fill-color:{TEAL} !important;
+  border-color:{TEAL} !important;
+  font-weight:800 !important;
+}}
+
+/* Dias fora do mês */
+div[data-baseweb="calendar"] [aria-disabled="true"],
+div[data-baseweb="calendar"] [aria-disabled="true"] *,
+div[data-baseweb="calendar"] [data-outside-month="true"],
+div[data-baseweb="calendar"] [data-outside-month="true"] * {{
+  background:{CARD} !important;
+  background-color:{CARD} !important;
+  color:#607892 !important;
+  -webkit-text-fill-color:#607892 !important;
+  opacity:1 !important;
+}}
 
 /* ── Botão ── */
 .stButton button {{
@@ -629,7 +695,7 @@ def aba_hoje(df_raw, hoje):
     cols_disp = [c for c in cols_show if c in df_h.columns]
     st.dataframe(
         df_h[cols_disp].reset_index(drop=True),
-        use_container_width=True, height=260,
+        width="stretch", height=260,
     )
 
 
@@ -1465,7 +1531,6 @@ def main():
   FILTROS GLOBAIS — aplicados em todas as abas (exceto "Hoje")
 </div>""", unsafe_allow_html=True)
 
-        # Atualizado: adicionado fc7 para comportar todos os 6 filtros
         fc1, fc2, fc3, fc4, fc5, fc6, fc7 = st.columns([1.2, 1.2, 1.8, 1.8, 1.8, 1.8, 0.8])
 
         data_min = df_raw["Data_abertura"].dropna().min().date()
@@ -1490,7 +1555,6 @@ def main():
             sel_or = st.multiselect("Origem / Canal", origens,
                                      placeholder="Todas as origens")
         
-        # Novo Filtro de Módulo Adicionado
         with fc6:
             modulos = sorted(df_raw["Modulo"].dropna().astype(str).unique())
             sel_mod = st.multiselect("Módulo", modulos,
@@ -1508,7 +1572,7 @@ def main():
     if sel_at:  df = df[df["Atendente"].isin(sel_at)]
     if sel_sit: df = df[df["Situacao"].isin(sel_sit)]
     if sel_or:  df = df[df["Origem"].isin(sel_or)]
-    if sel_mod: df = df[df["Modulo"].isin(sel_mod)] # <- Regra de filtragem do Módulo
+    if sel_mod: df = df[df["Modulo"].isin(sel_mod)]
 
     st.markdown(f"""<div style="font-size:0.68rem;color:{MUTED};margin:6px 0 14px">
   📋 <b style="color:{WHITE}">{len(df):,}</b> chamados no período
@@ -1516,19 +1580,34 @@ def main():
   até <b style="color:{WHITE}">{df_.strftime('%d/%m/%Y')}</b>
 </div>""", unsafe_allow_html=True)
 
-    mes_a, ano_a = hoje.month, hoje.year
-    df_mes  = df_raw[(df_raw["Mes_abertura"]==mes_a) & (df_raw["Ano_abertura"]==ano_a)]
-    df_mant = df_raw[
-        (df_raw["Mes_abertura"]==(mes_a-1 or 12)) &
-        (df_raw["Ano_abertura"]==(ano_a if mes_a>1 else ano_a-1))
+    # ── Lógica de MTD (Month-to-Date) por Dias Úteis ──
+    start_curr = hoje.replace(day=1)
+    bdays_curr = pd.bdate_range(start=start_curr, end=hoje).date
+    qtd_dias_uteis = len(bdays_curr)
+
+    mes_ant = 12 if hoje.month == 1 else hoje.month - 1
+    ano_ant = hoje.year - 1 if hoje.month == 1 else hoje.year
+    start_prev = date(ano_ant, mes_ant, 1)
+
+    ult_dia_prev = calendar.monthrange(ano_ant, mes_ant)[1]
+    end_prev = date(ano_ant, mes_ant, ult_dia_prev)
+
+    bdays_prev = pd.bdate_range(start=start_prev, end=end_prev).date
+    limite_idx = min(qtd_dias_uteis, len(bdays_prev)) - 1
+    cutoff_prev = bdays_prev[limite_idx]
+
+    df_mes = df_raw[(df_raw["Data_abertura"].dt.date >= start_curr) & (df_raw["Data_abertura"].dt.date <= hoje)]
+    
+    df_mant_parcial = df_raw[
+        (df_raw["Data_abertura"].dt.date >= start_prev) &
+        (df_raw["Data_abertura"].dt.date <= cutoff_prev)
     ]
 
     backlog = df_raw[df_raw["Data_Solucao"].isna()].shape[0]
     tot_mes = len(df_mes)
-    tot_ant = len(df_mant)
+    tot_ant = len(df_mant_parcial) 
     fcr_mes = safe_pct(df_mes["Finalizado_Mesmo_Dia"].sum(), tot_mes)
     
-    # >= 0 em vez de > 0
     tmr_raw = df_raw[df_raw["TMR_h"]>=0]["TMR_h"].mean()
     
     tot_per = len(df)
@@ -1536,7 +1615,7 @@ def main():
 
     delta_m = tot_mes - tot_ant
     d_cls   = "b-red" if delta_m>0 else "b-green"
-    d_str   = f"{'↑' if delta_m>0 else '↓'} {abs(delta_m)} vs mês ant."
+    d_str   = f"{'↑' if delta_m>0 else '↓'} {abs(delta_m)} vs {qtd_dias_uteis} dias úteis ant."
     f_cls   = "b-green" if fcr_mes>=70 else ("b-gold" if fcr_mes>=50 else "b-red")
 
     st.markdown(f"""<div class="kpi-grid">
