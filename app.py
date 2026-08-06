@@ -49,13 +49,13 @@ st.markdown(f"""
 
 /* ── Background ── */
 .stApp {{ background:{BG} !important; }}
-.block-container {{ padding:0.5rem 1.2rem 2rem !important; max-width:100% !important; }}
+.block-container {{ padding:0.4rem 1.2rem 1rem !important; max-width:100% !important; }}
 header[data-testid="stHeader"] {{ background:transparent !important; }}
 section[data-testid="stSidebar"] {{ background:{CARD} !important; border-right:1px solid {BORDER} !important; }}
 
 /* ── Textos globais ── */
-h1,h2,h3,h4,h5,p {{ color:{WHITE} !important; }}
-label {{ color:{MUTED} !important; font-size:0.74rem !important; font-weight:600 !important;
+h1,h2,h3,h4,h5,p {{ color:{WHITE} !important; margin-bottom: 4px !important; }}
+label {{ color:{MUTED} !important; font-size:0.70rem !important; font-weight:600 !important;
          text-transform:uppercase; letter-spacing:0.4px; }}
 
 /* ── MULTISELECT & SELECT — dark fix ── */
@@ -64,6 +64,7 @@ div[data-testid="stSelectbox"] > div {{
   background:{CARD2} !important;
   border:1px solid {BORDER} !important;
   border-radius:8px !important;
+  min-height: 36px !important;
 }}
 div[data-testid="stMultiSelect"] > div > div,
 div[data-testid="stSelectbox"] > div > div {{
@@ -89,8 +90,8 @@ ul[role="listbox"] {{ background:{CARD} !important; }}
 li[role="option"] {{ background:{CARD} !important; color:{WHITE} !important; }}
 li[role="option"]:hover {{ background:{CARD2} !important; }}
 li[role="option"][aria-selected="true"] {{ background:{CARD2} !important; color:{TEAL} !important; }}
-[data-baseweb="tag"] {{ background:{BRAND} !important; border:none !important; border-radius:6px !important; }}
-[data-baseweb="tag"] span {{ color:{WHITE} !important; }}
+[data-baseweb="tag"] {{ background:{BRAND} !important; border:none !important; border-radius:6px !important; margin: 2px !important; }}
+[data-baseweb="tag"] span {{ color:{WHITE} !important; padding: 0 4px !important; }}
 [data-baseweb="tag"] button svg {{ fill:{WHITE} !important; }}
 
 /* ── DATE INPUT — campo principal ── */
@@ -100,6 +101,7 @@ div[data-testid="stDateInput"] [data-baseweb="input"] {{
   background:{CARD2} !important;
   border:1px solid {BORDER} !important;
   border-radius:8px !important;
+  min-height: 36px !important;
 }}
 div[data-testid="stDateInput"] input {{
   color:{WHITE} !important;
@@ -119,7 +121,6 @@ div[data-testid="stDateInput"] div[role="combobox"] {{
 }}
 
 /* ── CALENDÁRIO DO DATE PICKER — correção completa ── */
-/* Container externo e painel interno */
 div[data-baseweb="popover"]:has(div[data-baseweb="calendar"]),
 div[data-baseweb="popover"]:has(div[data-baseweb="calendar"]) > div,
 div[data-baseweb="calendar"],
@@ -138,7 +139,6 @@ div[data-baseweb="calendar"] {{
   overflow:hidden !important;
 }}
 
-/* Remove todos os quadros brancos internos criados pelo BaseWeb */
 div[data-baseweb="calendar"] table,
 div[data-baseweb="calendar"] thead,
 div[data-baseweb="calendar"] tbody,
@@ -155,7 +155,6 @@ div[data-baseweb="calendar"] [role="gridcell"] > span {{
   border-color:transparent !important;
 }}
 
-/* Cabeçalho, mês, ano e setas */
 div[data-baseweb="calendar"] header,
 div[data-baseweb="calendar"] header > div,
 div[data-baseweb="calendar"] [data-baseweb="typography"],
@@ -172,7 +171,6 @@ div[data-baseweb="calendar"] option {{
   font-weight:700 !important;
 }}
 
-/* Seletores do mês e do ano */
 div[data-baseweb="calendar"] [data-baseweb="select"],
 div[data-baseweb="calendar"] [data-baseweb="select"] > div,
 div[data-baseweb="calendar"] [data-baseweb="select"] div,
@@ -208,7 +206,6 @@ div[data-baseweb="calendar"] svg {{
   opacity:1 !important;
 }}
 
-/* Dias da semana */
 div[data-baseweb="calendar"] [role="columnheader"],
 div[data-baseweb="calendar"] [role="columnheader"] * {{
   background:{CARD} !important;
@@ -220,7 +217,6 @@ div[data-baseweb="calendar"] [role="columnheader"] * {{
   opacity:1 !important;
 }}
 
-/* Todos os números dos dias */
 div[data-baseweb="calendar"] [role="gridcell"],
 div[data-baseweb="calendar"] [role="gridcell"] *,
 div[data-baseweb="calendar"] [aria-label*="Choose"],
@@ -231,7 +227,6 @@ div[data-baseweb="calendar"] [aria-label*="Escolher"] {{
   opacity:1 !important;
 }}
 
-/* Cada célula de dia, inclusive células vazias das bordas */
 div[data-baseweb="calendar"] [role="gridcell"],
 div[data-baseweb="calendar"] [role="gridcell"] > div,
 div[data-baseweb="calendar"] [role="gridcell"] button {{
@@ -249,7 +244,6 @@ div[data-baseweb="calendar"] [role="gridcell"] button:hover {{
   border-color:{BORDER} !important;
 }}
 
-/* Dia selecionado */
 div[data-baseweb="calendar"] [aria-selected="true"],
 div[data-baseweb="calendar"] [aria-selected="true"] > div,
 div[data-baseweb="calendar"] [aria-selected="true"] button,
@@ -263,7 +257,6 @@ div[data-baseweb="calendar"] button[aria-selected="true"] {{
   opacity:1 !important;
 }}
 
-/* Dia atual */
 div[data-baseweb="calendar"] [aria-current="date"],
 div[data-baseweb="calendar"] [aria-current="date"] > div,
 div[data-baseweb="calendar"] [aria-current="date"] button {{
@@ -273,7 +266,6 @@ div[data-baseweb="calendar"] [aria-current="date"] button {{
   font-weight:800 !important;
 }}
 
-/* Dias fora do mês */
 div[data-baseweb="calendar"] [aria-disabled="true"],
 div[data-baseweb="calendar"] [aria-disabled="true"] *,
 div[data-baseweb="calendar"] [data-outside-month="true"],
@@ -290,12 +282,12 @@ div[data-baseweb="calendar"] [data-outside-month="true"] * {{
   background:{BRAND} !important; color:{WHITE} !important;
   border:none !important; border-radius:8px !important;
   font-weight:600 !important; font-size:0.82rem !important;
-  width:100% !important; padding:8px 12px !important;
+  width:100% !important; padding:6px 10px !important;
   transition:opacity .2s !important;
 }}
 .stButton button:hover {{ opacity:.85 !important; }}
 
-/* ── Tabs ── */
+/* ── Tabs (Compactas) ── */
 .stTabs [data-baseweb="tab-list"] {{
   background:{CARD} !important;
   border-bottom:1px solid {BORDER} !important;
@@ -305,7 +297,7 @@ div[data-baseweb="calendar"] [data-outside-month="true"] * {{
 .stTabs [data-baseweb="tab"] {{
   background:transparent !important; border:none !important;
   color:{MUTED} !important; font-weight:500 !important;
-  font-size:0.82rem !important; padding:10px 16px !important;
+  font-size:0.75rem !important; padding:6px 14px !important;
   border-bottom:3px solid transparent !important;
   white-space:nowrap !important;
 }}
@@ -315,11 +307,11 @@ div[data-baseweb="calendar"] [data-outside-month="true"] * {{
 }}
 .stTabs [data-baseweb="tab"]:hover {{ color:{WHITE} !important; }}
 
-/* ── KPI grid ── */
+/* ── KPI grid (Compacto) ── */
 .kpi-grid {{
   display:grid;
   grid-template-columns:repeat(7,1fr);
-  gap:10px; margin-bottom:14px;
+  gap:8px; margin-bottom:8px;
 }}
 @media(max-width:1200px) {{ .kpi-grid {{ grid-template-columns:repeat(4,1fr); }} }}
 @media(max-width:900px)  {{ .kpi-grid {{ grid-template-columns:repeat(3,1fr); }} }}
@@ -328,20 +320,20 @@ div[data-baseweb="calendar"] [data-outside-month="true"] * {{
 
 .kpi-card {{
   background:{CARD}; border:1px solid {BORDER};
-  border-radius:12px; padding:13px 14px 11px;
-  position:relative; overflow:hidden; min-height:96px;
+  border-radius:10px; padding:8px 12px 6px;
+  position:relative; overflow:hidden; min-height:74px;
 }}
-.kpi-glow {{ position:absolute; top:0; left:0; right:0; height:3px; border-radius:12px 12px 0 0; }}
-.kpi-icon {{ position:absolute; right:11px; top:10px; font-size:1.6rem; opacity:0.08; }}
+.kpi-glow {{ position:absolute; top:0; left:0; right:0; height:3px; border-radius:10px 10px 0 0; }}
+.kpi-icon {{ position:absolute; right:8px; top:8px; font-size:1.3rem; opacity:0.08; }}
 .kpi-label {{
-  font-size:0.62rem; font-weight:700; letter-spacing:0.6px;
-  text-transform:uppercase; color:{MUTED} !important; margin-bottom:5px;
+  font-size:0.58rem; font-weight:700; letter-spacing:0.4px;
+  text-transform:uppercase; color:{MUTED} !important; margin-bottom:2px;
 }}
-.kpi-val {{ font-size:1.75rem; font-weight:800; color:{WHITE} !important; line-height:1; }}
-.kpi-sub {{ font-size:0.65rem; color:{MUTED} !important; margin-top:4px; }}
+.kpi-val {{ font-size:1.4rem; font-weight:800; color:{WHITE} !important; line-height:1; }}
+.kpi-sub {{ font-size:0.60rem; color:{MUTED} !important; margin-top:2px; }}
 .kpi-badge {{
-  display:inline-block; padding:2px 7px; border-radius:20px;
-  font-size:0.62rem; font-weight:700; margin-top:3px;
+  display:inline-block; padding:1px 6px; border-radius:20px;
+  font-size:0.55rem; font-weight:700; margin-top:2px;
 }}
 .b-green  {{ background:rgba(0,184,148,.18);  color:{GREEN};  }}
 .b-red    {{ background:rgba(230,57,70,.18);   color:{DANGER}; }}
@@ -350,15 +342,15 @@ div[data-baseweb="calendar"] [data-outside-month="true"] * {{
 .b-muted  {{ background:rgba(139,163,191,.12); color:{MUTED};  }}
 .b-teal   {{ background:rgba(0,206,201,.18);   color:{TEAL};   }}
 
-/* ── Chart card ── */
+/* ── Chart card (Compacto) ── */
 .chart-card {{
   background:{CARD}; border:1px solid {BORDER};
-  border-radius:12px; padding:14px 14px 8px; margin-bottom:12px;
+  border-radius:10px; padding:10px 12px 6px; margin-bottom:8px;
 }}
 .chart-title {{
-  font-size:0.68rem; font-weight:700; text-transform:uppercase;
+  font-size:0.65rem; font-weight:700; text-transform:uppercase;
   letter-spacing:0.5px; color:{MUTED} !important;
-  border-bottom:1px solid {BORDER}; padding-bottom:7px; margin-bottom:9px;
+  border-bottom:1px solid {BORDER}; padding-bottom:4px; margin-bottom:6px;
 }}
 
 /* ── Section title ── */
@@ -366,7 +358,7 @@ div[data-baseweb="calendar"] [data-outside-month="true"] * {{
   font-size:0.68rem; font-weight:700; text-transform:uppercase;
   letter-spacing:0.8px; color:{MUTED} !important;
   border-left:3px solid {TEAL}; padding-left:8px;
-  margin:16px 0 10px; display:block;
+  margin:10px 0 6px; display:block;
 }}
 
 /* ── Tooltip ── */
@@ -383,16 +375,16 @@ div[data-baseweb="calendar"] [data-outside-month="true"] * {{
 
 /* ── Filtro bar ── */
 .filter-bar-title {{
-  font-size:0.65rem; font-weight:700; text-transform:uppercase;
+  font-size:0.62rem; font-weight:700; text-transform:uppercase;
   letter-spacing:0.6px; color:{TEAL} !important;
-  display:flex; align-items:center; gap:6px; margin-bottom:10px;
+  display:flex; align-items:center; gap:6px; margin-bottom:4px;
 }}
 
 /* ── Alerta cards ── */
 .alert-card {{
   background:rgba(230,57,70,.08); border:1px solid rgba(230,57,70,.25);
   border-left:4px solid {DANGER}; border-radius:10px;
-  padding:10px 13px; margin-bottom:7px;
+  padding:8px 12px; margin-bottom:6px;
 }}
 .alert-warn {{
   background:rgba(253,203,110,.07); border:1px solid rgba(253,203,110,.2);
@@ -402,28 +394,28 @@ div[data-baseweb="calendar"] [data-outside-month="true"] * {{
   background:rgba(0,206,201,.07); border:1px solid rgba(0,206,201,.18);
   border-left-color:{TEAL};
 }}
-.alert-title {{ font-size:0.79rem; font-weight:700; color:{WHITE} !important; }}
-.alert-sub   {{ font-size:0.70rem; color:{MUTED} !important; margin-top:2px; line-height:1.4; }}
+.alert-title {{ font-size:0.75rem; font-weight:700; color:{WHITE} !important; }}
+.alert-sub   {{ font-size:0.68rem; color:{MUTED} !important; margin-top:2px; line-height:1.4; }}
 
 /* ── Ranking ── */
 .rank-row {{
   display:flex; align-items:center; gap:8px;
-  padding:6px 0; border-bottom:1px solid {BORDER};
+  padding:4px 0; border-bottom:1px solid {BORDER};
 }}
-.rank-name {{ font-size:0.80rem; color:{WHITE} !important; flex:1; font-weight:500;
+.rank-name {{ font-size:0.75rem; color:{WHITE} !important; flex:1; font-weight:500;
               white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }}
 .rank-bg   {{ flex:2; height:5px; background:{CARD2}; border-radius:3px; overflow:hidden; }}
 .rank-fill {{ height:5px; border-radius:3px; }}
-.rank-val  {{ font-size:0.80rem; font-weight:700; min-width:36px; text-align:right; }}
+.rank-val  {{ font-size:0.75rem; font-weight:700; min-width:32px; text-align:right; }}
 
 /* ── Tabela atendentes ── */
-.att-table {{ width:100%; border-collapse:collapse; font-size:0.78rem; }}
+.att-table {{ width:100%; border-collapse:collapse; font-size:0.75rem; }}
 .att-table th {{
-  font-size:0.63rem; font-weight:700; text-transform:uppercase;
+  font-size:0.60rem; font-weight:700; text-transform:uppercase;
   letter-spacing:0.5px; color:{MUTED} !important;
-  padding:7px 10px; border-bottom:1px solid {BORDER}; text-align:left;
+  padding:6px 8px; border-bottom:1px solid {BORDER}; text-align:left;
 }}
-.att-table td {{ color:{WHITE} !important; padding:8px 10px; border-bottom:1px solid {BORDER}; }}
+.att-table td {{ color:{WHITE} !important; padding:6px 8px; border-bottom:1px solid {BORDER}; }}
 .att-table tr:hover td {{ background:{CARD2}; }}
 .barcell {{ display:flex; align-items:center; gap:6px; }}
 .bbar-bg {{ flex:1; height:5px; background:{CARD2}; border-radius:3px; overflow:hidden; }}
@@ -432,11 +424,11 @@ div[data-baseweb="calendar"] [data-outside-month="true"] * {{
 /* ── Pulse ── */
 @keyframes pulse {{
   0%   {{ box-shadow:0 0 0 0 rgba(0,206,201,.6); }}
-  70%  {{ box-shadow:0 0 0 7px rgba(0,206,201,0); }}
+  70%  {{ box-shadow:0 0 0 6px rgba(0,206,201,0); }}
   100% {{ box-shadow:0 0 0 0 rgba(0,206,201,0); }}
 }}
 .dot-live {{
-  display:inline-block; width:7px; height:7px;
+  display:inline-block; width:6px; height:6px;
   background:{GREEN}; border-radius:50%;
   animation:pulse 2s infinite; margin-right:5px; vertical-align:middle;
 }}
@@ -448,11 +440,11 @@ div[data-baseweb="calendar"] [data-outside-month="true"] * {{
     min-width:100% !important; flex:none !important;
   }}
   .block-container {{ padding:0.4rem 0.6rem 1.5rem !important; }}
-  .kpi-val {{ font-size:1.4rem !important; }}
+  .kpi-val {{ font-size:1.3rem !important; }}
 }}
 
 /* ── hr ── */
-hr {{ border-color:{BORDER} !important; margin:8px 0 !important; }}
+hr {{ border-color:{BORDER} !important; margin:4px 0 8px !important; }}
 ::-webkit-scrollbar {{ width:4px; height:4px; }}
 ::-webkit-scrollbar-thumb {{ background:{BORDER}; border-radius:3px; }}
 ::-webkit-scrollbar-track {{ background:transparent; }}
@@ -464,7 +456,7 @@ hr {{ border-color:{BORDER} !important; margin:8px 0 !important; }}
 def pb(h=300, **kw):
     return dict(
         paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
-        margin=dict(t=12, b=8, l=6, r=6), height=h,
+        margin=dict(t=8, b=8, l=6, r=6), height=h,
         font=dict(family="Inter,sans-serif", color=MUTED, size=11),
         **kw,
     )
@@ -498,9 +490,9 @@ def rank_html(df_r, cn, cv, color=TEAL):
     rows = ""
     for i, row in enumerate(df_r.itertuples(), 1):
         pct = int(getattr(row, cv) / top * 100)
-        pos = medals[i-1] if i <= 3 else f'<span style="font-size:.75rem;color:{MUTED};width:22px;text-align:center">{i}</span>'
+        pos = medals[i-1] if i <= 3 else f'<span style="font-size:.70rem;color:{MUTED};width:22px;text-align:center">{i}</span>'
         rows += f"""<div class="rank-row">
-  <span style="font-size:.95rem">{pos}</span>
+  <span style="font-size:.90rem">{pos}</span>
   <span class="rank-name">{getattr(row, cn)}</span>
   <div class="rank-bg"><div class="rank-fill" style="width:{pct}%;background:{color}"></div></div>
   <span class="rank-val" style="color:{color}">{getattr(row, cv):,}</span>
@@ -576,7 +568,7 @@ def aba_hoje(df_raw, hoje):
     # Contagem de clientes diferentes atendidos hoje
     clientes_hj = df_h["Cliente"].nunique()
 
-    # KPIs do dia (agora com 7 colunas)
+    # KPIs do dia (agora com 7 colunas ultracompactas)
     st.markdown(f"""
     <div class="kpi-grid">
       {kpi("Abertos Hoje",      f"{ab_h}",       "novos chamados hoje",      "📥", BRAND)}
@@ -629,7 +621,7 @@ def aba_hoje(df_raw, hoje):
                 yaxis_title="", xaxis_title="",
                 legend=dict(orientation="h", y=1.12, x=0, title="", font=dict(color=WHITE, size=10))
             ))
-            fig.update_layout(margin=dict(t=35, b=8, l=6, r=6)) 
+            fig.update_layout(margin=dict(t=25, b=6, l=6, r=6)) 
             
             st.plotly_chart(fig, use_container_width=True)
             st.markdown(cc(), unsafe_allow_html=True)
@@ -661,7 +653,7 @@ def aba_hoje(df_raw, hoje):
                 xaxis_title="", yaxis_title="",
                 xaxis=dict(side="top") # Coloca os nomes dos módulos no topo para não disputar espaço
             ))
-            fig_mod.update_layout(margin=dict(t=35, b=8, l=6, r=6))
+            fig_mod.update_layout(margin=dict(t=25, b=6, l=6, r=6))
             
             st.plotly_chart(fig_mod, use_container_width=True)
             st.markdown(cc(), unsafe_allow_html=True)
@@ -690,7 +682,7 @@ def aba_hoje(df_raw, hoje):
             fig2.update_coloraxes(showscale=False)
             fig2.update_traces(textposition="outside", cliponaxis=False,
                                 textfont=dict(color=WHITE))
-            fig2.update_layout(**pb(max(200, len(df_mot_h)*32),
+            fig2.update_layout(**pb(max(180, len(df_mot_h)*28),
                 xaxis=dict(showgrid=False), yaxis=dict(showgrid=False),
                 yaxis_title="", xaxis_title=""))
             st.plotly_chart(fig2, use_container_width=True)
@@ -707,7 +699,7 @@ def aba_hoje(df_raw, hoje):
                            color_discrete_sequence=CORES)
             fig3.update_traces(textposition="inside", textinfo="percent+label",
                                 textfont=dict(size=10, color=WHITE))
-            fig3.update_layout(**pb(200, showlegend=False))
+            fig3.update_layout(**pb(180, showlegend=False))
             st.plotly_chart(fig3, use_container_width=True)
             st.markdown(cc(), unsafe_allow_html=True)
         except Exception as e:
@@ -721,7 +713,7 @@ def aba_hoje(df_raw, hoje):
                            color_discrete_sequence=CORES)
             fig4.update_traces(textposition="outside", textinfo="label+percent",
                                 textfont=dict(size=10, color=WHITE))
-            fig4.update_layout(**pb(200, showlegend=False))
+            fig4.update_layout(**pb(180, showlegend=False))
             st.plotly_chart(fig4, use_container_width=True)
             st.markdown(cc(), unsafe_allow_html=True)
         except Exception as e:
@@ -1444,7 +1436,7 @@ def aba_alertas(df, df_raw):
                     sac     = str(r.get("Sac","—"))
                     st.markdown(f"""<div class="alert-card">
   <div class="alert-title">🔴 #{sac} — {cliente}
-    <span style="float:right;color:{DANGER};font-weight:700;font-size:.78rem">{dias} dias</span>
+    <span style="float:right;color:{DANGER};font-weight:700;font-size:.75rem">{dias} dias</span>
   </div>
   <div class="alert-sub">👤 {atend} &nbsp;·&nbsp; 🧩 {modulo} &nbsp;·&nbsp; 📋 {assunto}</div>
 </div>""", unsafe_allow_html=True)
@@ -1456,7 +1448,7 @@ def aba_alertas(df, df_raw):
                 dias = int(r["Dias"])
                 st.markdown(f"""<div class="alert-card alert-warn">
   <div class="alert-title">🟠 #{r.get('Sac','—')} — {r.get('Cliente','—')}
-    <span style="float:right;color:{GOLD};font-weight:700;font-size:.78rem">{dias} dias</span>
+    <span style="float:right;color:{GOLD};font-weight:700;font-size:.75rem">{dias} dias</span>
   </div>
   <div class="alert-sub">👤 {r.get('Atendente','—')} &nbsp;·&nbsp; 🧩 {r.get('Modulo','—')} &nbsp;·&nbsp; 📋 {str(r.get('Assunto','—'))[:55]}</div>
 </div>""", unsafe_allow_html=True)
@@ -1604,7 +1596,7 @@ def main():
     if sel_or:  df = df[df["Origem"].isin(sel_or)]
     if sel_mod: df = df[df["Modulo"].isin(sel_mod)]
 
-    st.markdown(f"""<div style="font-size:0.68rem;color:{MUTED};margin:6px 0 14px">
+    st.markdown(f"""<div style="font-size:0.68rem;color:{MUTED};margin:2px 0 10px">
   📋 <b style="color:{WHITE}">{len(df):,}</b> chamados no período
   &nbsp;·&nbsp; de <b style="color:{WHITE}">{di.strftime('%d/%m/%Y')}</b>
   até <b style="color:{WHITE}">{df_.strftime('%d/%m/%Y')}</b>
