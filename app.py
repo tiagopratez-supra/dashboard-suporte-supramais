@@ -117,26 +117,41 @@ div[data-testid="stDateInput"] div[role="combobox"] {{
 }}
 
 /* ── CALENDÁRIO DO DATE PICKER — correção completa ── */
+
 /* Container externo e painel interno */
 div[data-baseweb="popover"]:has(div[data-baseweb="calendar"]),
 div[data-baseweb="popover"]:has(div[data-baseweb="calendar"]) > div,
 div[data-baseweb="calendar"],
 div[data-baseweb="calendar"] > div {{
-  background:{CARD} !important;
-  background-color:{CARD} !important;
-  color:{WHITE} !important;
-  border-color:{BORDER} !important;
+  background: {CARD} !important;
+  background-color: {CARD} !important;
+  color: {WHITE} !important;
+  border-color: {BORDER} !important;
 }}
 
 div[data-baseweb="calendar"] {{
-  padding:10px !important;
-  border:1px solid {BORDER} !important;
-  border-radius:10px !important;
-  box-shadow:0 12px 34px rgba(0,0,0,.58) !important;
-  overflow:hidden !important;
+  padding: 10px !important;
+  border: 1px solid {BORDER} !important;
+  border-radius: 10px !important;
+  box-shadow: 0 12px 34px rgba(0,0,0,.58) !important;
+  overflow: hidden !important;
 }}
 
-/* Remove todos os quadros brancos internos criados pelo BaseWeb */
+/* ── 1. CABEÇALHO (MÊS/ANO E SETAS) ── */
+div[data-baseweb="calendar"] header span,
+div[data-baseweb="calendar"] header div,
+div[data-baseweb="calendar"] header [data-baseweb="typography"],
+div[data-baseweb="calendar"] [role="heading"],
+div[data-baseweb="calendar"] [data-baseweb="select"] div,
+div[data-baseweb="calendar"] [role="combobox"] * {{
+  background: transparent !important;
+  color: {WHITE} !important;
+  -webkit-text-fill-color: {WHITE} !important;
+  font-weight: 700 !important;
+}}
+div[data-baseweb="calendar"] button svg {{ fill: {WHITE} !important; }}
+
+/* ── 2. LIMPEZA TOTAL DE FUNDOS DA GRADE ── */
 div[data-baseweb="calendar"] table,
 div[data-baseweb="calendar"] thead,
 div[data-baseweb="calendar"] tbody,
@@ -147,138 +162,61 @@ div[data-baseweb="calendar"] [role="grid"],
 div[data-baseweb="calendar"] [role="row"],
 div[data-baseweb="calendar"] [role="gridcell"],
 div[data-baseweb="calendar"] [role="gridcell"] > div,
-div[data-baseweb="calendar"] [role="gridcell"] > span {{
-  background:transparent !important;
-  background-color:transparent !important;
-  border-color:transparent !important;
-}}
-
-/* ── CORREÇÃO: Cabeçalho (Mês e Ano) ── */
-div[data-baseweb="calendar"] header span,
-div[data-baseweb="calendar"] header div,
-div[data-baseweb="calendar"] header [data-baseweb="typography"] {{
-  color:{WHITE} !important;
-  -webkit-text-fill-color:{WHITE} !important;
-  font-weight:700 !important;
-}}
-
-/* Seletores do mês e do ano */
-div[data-baseweb="calendar"] [data-baseweb="select"],
-div[data-baseweb="calendar"] [data-baseweb="select"] > div,
-div[data-baseweb="calendar"] [data-baseweb="select"] div,
-div[data-baseweb="calendar"] [role="combobox"],
-div[data-baseweb="calendar"] [role="combobox"] * {{
-  background:{CARD2} !important;
-  background-color:{CARD2} !important;
-  color:{WHITE} !important;
-  -webkit-text-fill-color:{WHITE} !important;
-  border-color:{BORDER} !important;
-  opacity:1 !important;
-}}
-
-div[data-baseweb="calendar"] button {{
-  background:transparent !important;
-  background-color:transparent !important;
-  color:{WHITE} !important;
-  -webkit-text-fill-color:{WHITE} !important;
-  border-color:transparent !important;
-  border-radius:7px !important;
-  opacity:1 !important;
-}}
-
-div[data-baseweb="calendar"] button:hover {{
-  background:{CARD2} !important;
-  background-color:{CARD2} !important;
-}}
-
-div[data-baseweb="calendar"] button svg,
-div[data-baseweb="calendar"] svg {{
-  fill:{WHITE} !important;
-  color:{WHITE} !important;
-  opacity:1 !important;
-}}
-
-/* Dias da semana */
-div[data-baseweb="calendar"] [role="columnheader"],
-div[data-baseweb="calendar"] [role="columnheader"] * {{
-  background:{CARD} !important;
-  background-color:{CARD} !important;
-  color:{MUTED} !important;
-  -webkit-text-fill-color:{MUTED} !important;
-  font-size:.75rem !important;
-  font-weight:700 !important;
-  opacity:1 !important;
-}}
-
-/* Todos os números dos dias */
-div[data-baseweb="calendar"] [role="gridcell"],
-div[data-baseweb="calendar"] [role="gridcell"] *,
-div[data-baseweb="calendar"] [aria-label*="Choose"],
-div[data-baseweb="calendar"] [aria-label*="Escolher"] {{
-  color: {WHITE} !important;
-  -webkit-text-fill-color: {WHITE} !important;
-  font-weight: 600 !important;
-  opacity: 1 !important;
-}}
-
-/* ── TRADUÇÃO FORÇADA: Dias da Semana (CSS Hack) ── */
-div[data-baseweb="calendar"] [role="columnheader"] {{ font-size: 0 !important; }}
-div[data-baseweb="calendar"] [role="columnheader"]:nth-child(1)::after {{ content: "Dom"; font-size: .75rem; }}
-div[data-baseweb="calendar"] [role="columnheader"]:nth-child(2)::after {{ content: "Seg"; font-size: .75rem; }}
-div[data-baseweb="calendar"] [role="columnheader"]:nth-child(3)::after {{ content: "Ter"; font-size: .75rem; }}
-div[data-baseweb="calendar"] [role="columnheader"]:nth-child(4)::after {{ content: "Qua"; font-size: .75rem; }}
-div[data-baseweb="calendar"] [role="columnheader"]:nth-child(5)::after {{ content: "Qui"; font-size: .75rem; }}
-div[data-baseweb="calendar"] [role="columnheader"]:nth-child(6)::after {{ content: "Sex"; font-size: .75rem; }}
-div[data-baseweb="calendar"] [role="columnheader"]:nth-child(7)::after {{ content: "Sáb"; font-size: .75rem; }}
-
-/* ── CORREÇÃO: Remover os quadrados escuros do fundo ── */
-div[data-baseweb="calendar"] [role="gridcell"] {{
+div[data-baseweb="calendar"] [role="gridcell"] button {{
   background: transparent !important;
+  background-color: transparent !important;
   border: none !important;
 }}
 
-/* ── CORREÇÃO: Dias normais ── */
+/* ── 3. ESTILO APENAS DOS DIAS VÁLIDOS ── */
 div[data-baseweb="calendar"] [role="gridcell"] button {{
-  background: transparent !important; 
-  border: 1px solid transparent !important;
-  border-radius: 7px !important;
   color: {WHITE} !important;
+  -webkit-text-fill-color: {WHITE} !important;
+  border-radius: 7px !important;
+  font-weight: 600 !important;
 }}
-
 div[data-baseweb="calendar"] [role="gridcell"] button:hover {{
-  background: {CARD2} !important;
   background-color: {CARD2} !important;
-  border-color: {BORDER} !important;
 }}
-
-/* ── CORREÇÃO: Dias fora do mês atual (esmaecidos) ── */
-div[data-baseweb="calendar"] [aria-disabled="true"],
-div[data-baseweb="calendar"] button[aria-disabled="true"],
-div[data-baseweb="calendar"] [data-outside-month="true"],
-div[data-baseweb="calendar"] button[data-outside-month="true"] {{
-  color: rgba(232, 244, 253, 0.25) !important; /* Branco com 25% de opacidade */
-  -webkit-text-fill-color: rgba(232, 244, 253, 0.25) !important;
-  background: transparent !important;
-  pointer-events: none !important; /* Impede clique */
-}}
-
-/* Dia selecionado */
 div[data-baseweb="calendar"] button[aria-selected="true"] {{
-  background: {BRAND} !important;
   background-color: {BRAND} !important;
   color: #FFFFFF !important;
   -webkit-text-fill-color: #FFFFFF !important;
-  border-color: {BRAND} !important;
   font-weight: 800 !important;
 }}
-
-/* Dia atual */
 div[data-baseweb="calendar"] button[aria-current="date"] {{
   color: {TEAL} !important;
   -webkit-text-fill-color: {TEAL} !important;
-  border-color: {TEAL} !important;
   font-weight: 800 !important;
 }}
+
+/* ── 4. OCULTAR QUADRADOS VAZIOS DOS OUTROS MESES ── */
+div[data-baseweb="calendar"] [role="gridcell"]:empty,
+div[data-baseweb="calendar"] [role="gridcell"] > div:empty,
+div[data-baseweb="calendar"] button[aria-disabled="true"],
+div[data-baseweb="calendar"] [data-outside-month="true"] {{
+  opacity: 0 !important; 
+  pointer-events: none !important;
+}}
+
+/* ── 5. TRADUÇÃO FORÇADA DOS DIAS DA SEMANA ── */
+div[data-baseweb="calendar"] [role="columnheader"] * {{
+  display: none !important; /* Esconde as letras originais (Su, Mo...) */
+}}
+div[data-baseweb="calendar"] [role="columnheader"]::after {{
+  font-size: 0.75rem !important;
+  color: {MUTED} !important;
+  font-weight: 700 !important;
+  display: block;
+  text-align: center;
+}}
+div[data-baseweb="calendar"] [role="columnheader"]:nth-child(1)::after {{ content: "Dom"; }}
+div[data-baseweb="calendar"] [role="columnheader"]:nth-child(2)::after {{ content: "Seg"; }}
+div[data-baseweb="calendar"] [role="columnheader"]:nth-child(3)::after {{ content: "Ter"; }}
+div[data-baseweb="calendar"] [role="columnheader"]:nth-child(4)::after {{ content: "Qua"; }}
+div[data-baseweb="calendar"] [role="columnheader"]:nth-child(5)::after {{ content: "Qui"; }}
+div[data-baseweb="calendar"] [role="columnheader"]:nth-child(6)::after {{ content: "Sex"; }}
+div[data-baseweb="calendar"] [role="columnheader"]:nth-child(7)::after {{ content: "Sáb"; }}
 
 /* ── Botão ── */
 .stButton button {{
