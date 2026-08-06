@@ -720,6 +720,26 @@ def aba_hoje(df_raw, hoje):
             st.markdown(cc(), unsafe_allow_html=True)
             st.warning(f"Gráfico indisponível: {e}")
 
+    # ===== AUDITORIA DE DADOS =====
+    st.markdown("<br>", unsafe_allow_html=True)
+    with st.expander("🔍 Auditoria e Depuração (Comparar com Excel)", expanded=False):
+        st.markdown("**1. Query SQL Executada no Banco:**")
+        st.code("""
+SELECT
+    Sac, 
+    CONVERT(VARCHAR(10), Data_abertura, 103) + ' ' + CONVERT(VARCHAR(8), Data_abertura, 108) AS Data_abertura,
+    Dia_abertura, Mes_abertura, Ano_abertura,
+    CONVERT(VARCHAR(10), [Data Solucao], 103) + ' ' + CONVERT(VARCHAR(8), [Data Solucao], 108) AS Data_Solucao,
+    [Cliente Codigo] AS Cliente_Codigo, Cliente, Contato,
+    Assunto, Motivo, Motivocodigo, Modulo, Situacao, Atendente, Origem,
+    Finalizado_Mesmo_Dia, Tipo
+FROM sgrp_atendimentos_geral
+WHERE Ano_abertura >= 2020;
+        """, language="sql")
+        
+        st.markdown("**2. Dados Brutos (Somente chamados ABERTOS hoje):**")
+        st.dataframe(df_h.reset_index(drop=True), width="stretch")
+
 
 # ══════════════════════════════════════════════════════════════════════════════
 #  ABA 1 — RESUMO GERAL
