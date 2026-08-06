@@ -1,9 +1,10 @@
 # =============================================================================
 # Central de Suporte — SupraMAIS  |  Command Center
-# Stack: Streamlit + pyodbc + pandas + plotly
+# Stack: Streamlit + pymssql + pandas + plotly
 # =============================================================================
 
 import streamlit as st
+import streamlit.components.v1 as components
 import pandas as pd
 import pymssql
 import plotly.express as px
@@ -21,7 +22,7 @@ st.set_page_config(
     layout="wide",
     initial_sidebar_state="collapsed",
 )
-st.html('<script>setTimeout(()=>window.parent.location.reload(),1800000)</script>')
+components.html('<script>setTimeout(()=>window.parent.location.reload(),1800000)</script>', height=0)
 
 # ── PALETA ─────────────────────────────────────────────────────────────────────
 BG     = "#0D1B2A"
