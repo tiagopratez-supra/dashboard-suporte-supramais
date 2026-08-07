@@ -771,10 +771,15 @@ def aba_por_hora(df_base, hoje):
     pico_hora = df_hora.iloc[df_hora['Qtd'].idxmax()]['Hora'] if not df_hora.empty else "N/A"
     pico_qtd = df_hora['Qtd'].max() if not df_hora.empty else 0
     
-    st.markdown(f"""<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:12px">
+    # Cálculo da Média por Hora (Total de chamados / Número de horas únicas que tiveram atividade)
+    horas_ativas = df_dia["Hora"].nunique()
+    media_hora = len(df_dia) / horas_ativas if horas_ativas > 0 else 0
+    
+    st.markdown(f"""<div style="display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:12px">
       {kpi("Total no Dia", f"{len(df_dia):,}", "com os filtros aplicados", "📋", TEAL)}
       {kpi("Atendentes", f"{df_dia['Atendente'].nunique()}", "com chamados registrados", "👥", BRAND)}
       {kpi("Clientes", f"{df_dia['Cliente'].nunique()}", "atendidos na data", "🏢", PURPLE)}
+      {kpi("Média por Hora", f"{media_hora:.1f}", "chamados por hora ativa", "⏱️", GREEN)}
       {kpi("Pico de Volume", f"{pico_hora}", f"com {pico_qtd} chamados neste horário", "🔥", ORANGE)}
     </div>""", unsafe_allow_html=True)
 
@@ -812,7 +817,12 @@ def aba_por_hora(df_base, hoje):
 
     st.markdown('<span class="sec-t">📋 Detalhamento Cronológico dos Chamados</span>', unsafe_allow_html=True)
     cols_disp = ["Hora", "Sac", "Atendente", "Cliente", "Modulo", "Situacao", "Origem", "Assunto"]
-    df_show = df_dia[[c for c in cols_disp if c in df_dia.columns]].sort_values(["Hora_Int", "Sac"]).reset_index(drop=True)
+    
+    # ── CORREÇÃO AQUI ──
+    # Primeiro nós ordenamos a base inteira usando o Hora_Int, e só DEPOIS selecionamos as colunas finais
+    valid_cols = [c for c in cols_disp if c in df_dia.columns]
+    df_show = df_dia.sort_values(["Hora_Int", "Sac"])[valid_cols].reset_index(drop=True)
+    
     st.dataframe(df_show, width="stretch", height=300)
 
 
