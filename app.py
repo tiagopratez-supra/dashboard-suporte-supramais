@@ -568,7 +568,7 @@ def aba_hoje(df_raw, hoje):
     # Contagem de clientes diferentes atendidos hoje
     clientes_hj = df_h["Cliente"].nunique()
 
-    # KPIs do dia (agora com 7 colunas ultracompactas)
+    # KPIs do dia
     st.markdown(f"""
     <div class="kpi-grid">
       {kpi("Abertos Hoje",      f"{ab_h}",       "novos chamados hoje",      "📥", BRAND)}
@@ -739,6 +739,81 @@ WHERE Ano_abertura >= 2020;
         
         st.markdown("**2. Dados Brutos (Somente chamados ABERTOS hoje):**")
         st.dataframe(df_h.reset_index(drop=True), width="stretch")
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+#  NOVA ABA — POR HORA
+# ══════════════════════════════════════════════════════════════════════════════
+def aba_por_hora(df_base, hoje):
+    st.markdown('<span class="sec-t">📅 Filtro de Data (Exclusivo para esta análise)</span>', unsafe_allow_html=True)
+    
+    c_filt, _ = st.columns([2, 8])
+    with c_filt:
+        data_filtro = st.date_input("Escolha o dia para analisar o fluxo", value=hoje, format="DD/MM/YYYY", key="filtro_hora")
+    
+    # Aplica o filtro de data ao df base (que já passou pelos filtros globais de Atendente, Módulo, etc)
+    df_dia = df_base[df_base["Data_abertura"].dt.date == data_filtro].copy()
+    
+    if df_dia.empty:
+        st.markdown(f"""
+        <div style="text-align:center;padding:40px;color:{MUTED}">
+          <div style="font-size:2rem">📭</div>
+          <div style="font-size:1rem;margin-top:8px">Nenhum chamado aberto em {data_filtro.strftime('%d/%m/%Y')} com os filtros selecionados.</div>
+        </div>""", unsafe_allow_html=True)
+        return
+
+    # Extrair a Hora
+    df_dia["Hora_Int"] = df_dia["Data_abertura"].dt.hour
+    df_dia["Hora"] = df_dia["Hora_Int"].apply(lambda x: f"{x:02d}:00")
+    
+    # Agrupamentos para os KPIs
+    df_hora = df_dia.groupby("Hora").size().reset_index(name="Qtd")
+    pico_hora = df_hora.iloc[df_hora['Qtd'].idxmax()]['Hora'] if not df_hora.empty else "N/A"
+    pico_qtd = df_hora['Qtd'].max() if not df_hora.empty else 0
+    
+    st.markdown(f"""<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:12px">
+      {kpi("Total no Dia", f"{len(df_dia):,}", "com os filtros aplicados", "📋", TEAL)}
+      {kpi("Atendentes", f"{df_dia['Atendente'].nunique()}", "com chamados registrados", "👥", BRAND)}
+      {kpi("Clientes", f"{df_dia['Cliente'].nunique()}", "atendidos na data", "🏢", PURPLE)}
+      {kpi("Pico de Volume", f"{pico_hora}", f"com {pico_qtd} chamados neste horário", "🔥", ORANGE)}
+    </div>""", unsafe_allow_html=True)
+
+    c1, c2 = st.columns(2)
+    with c1:
+        try:
+            st.markdown(co(f"📊 Fluxo de Chamados por Hora × Atendente"), unsafe_allow_html=True)
+            dh_at = df_dia.groupby(["Hora", "Atendente"]).size().reset_index(name="Qtd")
+            fig1 = px.bar(dh_at, x="Hora", y="Qtd", color="Atendente", text="Qtd",
+                          color_discrete_sequence=CORES)
+            fig1.update_traces(textposition="inside", textfont=dict(size=10, color=WHITE))
+            fig1.update_layout(**pb(280, xaxis_title="", yaxis_title="Volume de Chamados",
+                                legend=dict(orientation="h", y=1.2, x=0, title="", font=dict(color=WHITE, size=9))))
+            st.plotly_chart(fig1, use_container_width=True)
+            st.markdown(cc(), unsafe_allow_html=True)
+        except Exception as e:
+            st.markdown(cc(), unsafe_allow_html=True)
+            
+    with c2:
+        try:
+            st.markdown(co("🧩 Fluxo de Chamados por Hora × Módulo (Top 5)"), unsafe_allow_html=True)
+            top5m = df_dia["Modulo"].value_counts().nlargest(5).index
+            df_hm = df_dia.copy()
+            df_hm["Mod_x"] = df_hm["Modulo"].apply(lambda x: x if x in top5m else "Outros")
+            dh_mod = df_hm.groupby(["Hora", "Mod_x"]).size().reset_index(name="Qtd")
+            fig2 = px.bar(dh_mod, x="Hora", y="Qtd", color="Mod_x", text="Qtd",
+                          color_discrete_sequence=CORES)
+            fig2.update_traces(textposition="inside", textfont=dict(size=10, color=WHITE))
+            fig2.update_layout(**pb(280, xaxis_title="", yaxis_title="Volume de Chamados",
+                                legend=dict(orientation="h", y=1.2, x=0, title="", font=dict(color=WHITE, size=9))))
+            st.plotly_chart(fig2, use_container_width=True)
+            st.markdown(cc(), unsafe_allow_html=True)
+        except Exception as e:
+            st.markdown(cc(), unsafe_allow_html=True)
+
+    st.markdown('<span class="sec-t">📋 Detalhamento Cronológico dos Chamados</span>', unsafe_allow_html=True)
+    cols_disp = ["Hora", "Sac", "Atendente", "Cliente", "Modulo", "Situacao", "Origem", "Assunto"]
+    df_show = df_dia[[c for c in cols_disp if c in df_dia.columns]].sort_values(["Hora_Int", "Sac"]).reset_index(drop=True)
+    st.dataframe(df_show, width="stretch", height=300)
 
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -1570,7 +1645,7 @@ def main():
     with st.container():
         st.markdown(f"""<div class="filter-bar-title">
   <span style="display:inline-block;width:6px;height:6px;background:{TEAL};border-radius:50%"></span>
-  FILTROS GLOBAIS — aplicados em todas as abas (exceto "Hoje")
+  FILTROS GLOBAIS — aplicados em todas as abas (Data é ignorada na aba "Hoje" e reconfigurada em "Por Hora")
 </div>""", unsafe_allow_html=True)
 
         fc1, fc2, fc3, fc4, fc5, fc6, fc7 = st.columns([1.2, 1.2, 1.8, 1.8, 1.8, 1.8, 0.8])
@@ -1608,13 +1683,18 @@ def main():
                 st.cache_data.clear()
                 st.rerun()
 
-    df = df_raw.copy()
+    # Criação de um DF base que aplica todos os filtros EXCETO a data global.
+    # Isso permite que a aba "Por Hora" obedeça as seleções acima, mas use sua própria data.
+    df_base_no_date = df_raw.copy()
+    if sel_at:  df_base_no_date = df_base_no_date[df_base_no_date["Atendente"].isin(sel_at)]
+    if sel_sit: df_base_no_date = df_base_no_date[df_base_no_date["Situacao"].isin(sel_sit)]
+    if sel_or:  df_base_no_date = df_base_no_date[df_base_no_date["Origem"].isin(sel_or)]
+    if sel_mod: df_base_no_date = df_base_no_date[df_base_no_date["Modulo"].isin(sel_mod)]
+
+    # Aplicação final do filtro de data para as demais abas de relatórios gerais
+    df = df_base_no_date.copy()
     if di <= df_:
         df = df[(df["Data_abertura"].dt.date >= di) & (df["Data_abertura"].dt.date <= df_)]
-    if sel_at:  df = df[df["Atendente"].isin(sel_at)]
-    if sel_sit: df = df[df["Situacao"].isin(sel_sit)]
-    if sel_or:  df = df[df["Origem"].isin(sel_or)]
-    if sel_mod: df = df[df["Modulo"].isin(sel_mod)]
 
     st.markdown(f"""<div style="font-size:0.68rem;color:{MUTED};margin:2px 0 10px">
   📋 <b style="color:{WHITE}">{len(df):,}</b> chamados no período
@@ -1674,6 +1754,7 @@ def main():
 
     tabs = st.tabs([
         "🕐 Hoje",
+        "⏱️ Por Hora",
         "📊 Resumo Geral",
         "🏢 Clientes",
         "👥 Atendentes",
@@ -1683,12 +1764,13 @@ def main():
     ])
 
     with tabs[0]: aba_hoje(df_raw, hoje)
-    with tabs[1]: aba_resumo(df)
-    with tabs[2]: aba_clientes(df)
-    with tabs[3]: aba_atendentes(df)
-    with tabs[4]: aba_situacao(df)
-    with tabs[5]: aba_sla(df)
-    with tabs[6]: aba_alertas(df, df_raw)
+    with tabs[1]: aba_por_hora(df_base_no_date, hoje)
+    with tabs[2]: aba_resumo(df)
+    with tabs[3]: aba_clientes(df)
+    with tabs[4]: aba_atendentes(df)
+    with tabs[5]: aba_situacao(df)
+    with tabs[6]: aba_sla(df)
+    with tabs[7]: aba_alertas(df, df_raw)
 
 
 if __name__ == "__main__":
