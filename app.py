@@ -58,9 +58,10 @@ h1,h2,h3,h4,h5,p {{ color:{WHITE} !important; margin-bottom: 4px !important; }}
 label {{ color:{MUTED} !important; font-size:0.70rem !important; font-weight:600 !important;
          text-transform:uppercase; letter-spacing:0.4px; }}
 
-/* ── MULTISELECT & SELECT — dark fix ── */
+/* ── MULTISELECT, SELECT & TEXT INPUT — dark fix ── */
 div[data-testid="stMultiSelect"] > div,
-div[data-testid="stSelectbox"] > div {{
+div[data-testid="stSelectbox"] > div,
+div[data-testid="stTextInput"] > div {{
   background:{CARD2} !important;
   border:1px solid {BORDER} !important;
   border-radius:8px !important;
@@ -72,12 +73,14 @@ div[data-testid="stSelectbox"] > div > div {{
   color:{WHITE} !important;
 }}
 div[data-testid="stMultiSelect"] input,
-div[data-testid="stSelectbox"] input {{
+div[data-testid="stSelectbox"] input,
+div[data-testid="stTextInput"] input {{
   color:{WHITE} !important;
   caret-color:{WHITE} !important;
   background:transparent !important;
 }}
-div[data-testid="stMultiSelect"] input::placeholder {{
+div[data-testid="stMultiSelect"] input::placeholder,
+div[data-testid="stTextInput"] input::placeholder {{
   color:{MUTED} !important; opacity:1 !important;
 }}
 [data-baseweb="select"] > div {{
@@ -85,7 +88,12 @@ div[data-testid="stMultiSelect"] input::placeholder {{
   border-color:{BORDER} !important;
 }}
 [data-baseweb="select"] span {{ color:{WHITE} !important; }}
-[data-baseweb="popover"] > div {{ background:{CARD} !important; border:1px solid {BORDER} !important; }}
+
+/* Limita a atuação do popover só aos inputs (evita quebrar o menu da tabela) */
+div[data-testid="stMultiSelect"] [data-baseweb="popover"] > div,
+div[data-testid="stSelectbox"] [data-baseweb="popover"] > div {{ 
+    background:{CARD} !important; border:1px solid {BORDER} !important; 
+}}
 ul[role="listbox"] {{ background:{CARD} !important; }}
 li[role="option"] {{ background:{CARD} !important; color:{WHITE} !important; }}
 li[role="option"]:hover {{ background:{CARD2} !important; }}
@@ -791,8 +799,9 @@ def aba_por_hora(df_base, hoje):
             fig1 = px.bar(dh_at, x="Hora", y="Qtd", color="Atendente", text="Qtd",
                           color_discrete_sequence=CORES)
             fig1.update_traces(textposition="inside", textfont=dict(size=10, color=WHITE))
-            fig1.update_layout(**pb(280, xaxis_title="", yaxis_title="Volume de Chamados",
-                                legend=dict(orientation="h", y=1.2, x=0, title="", font=dict(color=WHITE, size=9))))
+            # Legenda fixada na lateral direita na vertical para nunca sobrepor o gráfico
+            fig1.update_layout(**pb(320, xaxis_title="", yaxis_title="Volume de Chamados",
+                                legend=dict(orientation="v", title="", font=dict(color=WHITE, size=9))))
             st.plotly_chart(fig1, use_container_width=True)
             st.markdown(cc(), unsafe_allow_html=True)
         except Exception as e:
@@ -808,21 +817,33 @@ def aba_por_hora(df_base, hoje):
             fig2 = px.bar(dh_mod, x="Hora", y="Qtd", color="Mod_x", text="Qtd",
                           color_discrete_sequence=CORES)
             fig2.update_traces(textposition="inside", textfont=dict(size=10, color=WHITE))
-            fig2.update_layout(**pb(280, xaxis_title="", yaxis_title="Volume de Chamados",
-                                legend=dict(orientation="h", y=1.2, x=0, title="", font=dict(color=WHITE, size=9))))
+            # Legenda fixada na lateral direita na vertical
+            fig2.update_layout(**pb(320, xaxis_title="", yaxis_title="Volume de Chamados",
+                                legend=dict(orientation="v", title="", font=dict(color=WHITE, size=9))))
             st.plotly_chart(fig2, use_container_width=True)
             st.markdown(cc(), unsafe_allow_html=True)
         except Exception as e:
             st.markdown(cc(), unsafe_allow_html=True)
 
     st.markdown('<span class="sec-t">📋 Detalhamento Cronológico dos Chamados</span>', unsafe_allow_html=True)
-    cols_disp = ["Hora", "Sac", "Atendente", "Cliente", "Modulo", "Situacao", "Origem", "Assunto"]
     
-    # ── CORREÇÃO AQUI ──
-    # Primeiro nós ordenamos a base inteira usando o Hora_Int, e só DEPOIS selecionamos as colunas finais
+    # Campo de Filtro Exclusivo e Inteligente acima da tabela
+    col_f, _ = st.columns([3, 7])
+    with col_f:
+        busca = st.text_input("🔍 Filtrar na tabela abaixo:", placeholder="Busque por SAC, Cliente, Assunto...", key="busca_hora")
+    
+    cols_disp = ["Hora", "Sac", "Atendente", "Cliente", "Modulo", "Situacao", "Origem", "Assunto"]
     valid_cols = [c for c in cols_disp if c in df_dia.columns]
+    
+    # Aplica a ordenação pela hora e depois seleciona as colunas visíveis
     df_show = df_dia.sort_values(["Hora_Int", "Sac"])[valid_cols].reset_index(drop=True)
     
+    # Se o usuário digitou algo na busca, filtra o dataframe em todas as colunas
+    if busca:
+        busca_lower = busca.lower()
+        mask = df_show.astype(str).apply(lambda x: x.str.lower().str.contains(busca_lower)).any(axis=1)
+        df_show = df_show[mask]
+        
     st.dataframe(df_show, width="stretch", height=300)
 
 
