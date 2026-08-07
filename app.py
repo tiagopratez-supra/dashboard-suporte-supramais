@@ -25,295 +25,30 @@ st.set_page_config(
 components.html('<script>setTimeout(()=>window.parent.location.reload(),1800000)</script>', height=0)
 
 # ── PALETA ─────────────────────────────────────────────────────────────────────
-BG     = "#0D1B2A"
-CARD   = "#112240"
-CARD2  = "#1A3258"
+# Cores mantidas apenas para os gráficos Plotly e componentes HTML customizados
+BG     = "#0F172A"
+CARD   = "#1E293B"
+CARD2  = "#334155"
 BRAND  = "#CC2020"
 TEAL   = "#00CEC9"
 GREEN  = "#00B894"
 ORANGE = "#E17055"
 GOLD   = "#FDCB6E"
 PURPLE = "#A29BFE"
-WHITE  = "#E8F4FD"
-MUTED  = "#8BA3BF"
-BORDER = "#1E3A5F"
+WHITE  = "#F8FAFC"
+MUTED  = "#94A3B8"
+BORDER = "#334155"
 DANGER = "#E63946"
 CORES  = [BRAND, TEAL, ORANGE, GOLD, GREEN, PURPLE, "#FD79A8", "#74B9FF", "#55EFC4", "#DFE6E9"]
 
-# ── CSS ────────────────────────────────────────────────────────────────────────
+# ── CSS LIMPO (Apenas Componentes Customizados) ────────────────────────────────
 st.markdown(f"""
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
 
 * {{ font-family:'Inter',sans-serif !important; box-sizing:border-box; }}
-
-/* ── Background ── */
-.stApp {{ background:{BG} !important; }}
 .block-container {{ padding:0.4rem 1.2rem 1rem !important; max-width:100% !important; }}
 header[data-testid="stHeader"] {{ background:transparent !important; }}
-section[data-testid="stSidebar"] {{ background:{CARD} !important; border-right:1px solid {BORDER} !important; }}
-
-/* ── Textos globais ── */
-h1,h2,h3,h4,h5,p {{ color:{WHITE} !important; margin-bottom: 4px !important; }}
-label {{ color:{MUTED} !important; font-size:0.70rem !important; font-weight:600 !important;
-         text-transform:uppercase; letter-spacing:0.4px; }}
-
-/* ── MULTISELECT, SELECT & TEXT INPUT — dark fix ── */
-div[data-testid="stMultiSelect"] > div,
-div[data-testid="stSelectbox"] > div,
-div[data-testid="stTextInput"] > div {{
-  background:{CARD2} !important;
-  border:1px solid {BORDER} !important;
-  border-radius:8px !important;
-  min-height: 36px !important;
-}}
-div[data-testid="stMultiSelect"] > div > div,
-div[data-testid="stSelectbox"] > div > div {{
-  background:{CARD2} !important;
-  color:{WHITE} !important;
-}}
-div[data-testid="stMultiSelect"] input,
-div[data-testid="stSelectbox"] input,
-div[data-testid="stTextInput"] input {{
-  color:{WHITE} !important;
-  caret-color:{WHITE} !important;
-  background:transparent !important;
-}}
-div[data-testid="stMultiSelect"] input::placeholder,
-div[data-testid="stTextInput"] input::placeholder {{
-  color:{MUTED} !important; opacity:1 !important;
-}}
-[data-baseweb="select"] > div {{
-  background:{CARD2} !important;
-  border-color:{BORDER} !important;
-}}
-[data-baseweb="select"] span {{ color:{WHITE} !important; }}
-
-/* Limita a atuação do popover só aos inputs (evita quebrar o menu da tabela) */
-div[data-testid="stMultiSelect"] [data-baseweb="popover"] > div,
-div[data-testid="stSelectbox"] [data-baseweb="popover"] > div {{ 
-    background:{CARD} !important; border:1px solid {BORDER} !important; 
-}}
-ul[role="listbox"] {{ background:{CARD} !important; }}
-li[role="option"] {{ background:{CARD} !important; color:{WHITE} !important; }}
-li[role="option"]:hover {{ background:{CARD2} !important; }}
-li[role="option"][aria-selected="true"] {{ background:{CARD2} !important; color:{TEAL} !important; }}
-[data-baseweb="tag"] {{ background:{BRAND} !important; border:none !important; border-radius:6px !important; margin: 2px !important; }}
-[data-baseweb="tag"] span {{ color:{WHITE} !important; padding: 0 4px !important; }}
-[data-baseweb="tag"] button svg {{ fill:{WHITE} !important; }}
-
-/* ── DATE INPUT — campo principal ── */
-div[data-testid="stDateInput"] > div,
-div[data-testid="stDateInput"] [data-baseweb="base-input"],
-div[data-testid="stDateInput"] [data-baseweb="input"] {{
-  background:{CARD2} !important;
-  border:1px solid {BORDER} !important;
-  border-radius:8px !important;
-  min-height: 36px !important;
-}}
-div[data-testid="stDateInput"] input {{
-  color:{WHITE} !important;
-  background:transparent !important;
-  -webkit-text-fill-color:{WHITE} !important;
-  opacity:1 !important;
-}}
-div[data-testid="stDateInput"] input::placeholder {{
-  color:{MUTED} !important;
-  opacity:1 !important;
-}}
-div[data-testid="stDateInput"] p,
-div[data-testid="stDateInput"] span,
-div[data-testid="stDateInput"] div[role="combobox"] {{
-  color:{WHITE} !important;
-  -webkit-text-fill-color:{WHITE} !important;
-}}
-
-/* ── CALENDÁRIO DO DATE PICKER — correção completa ── */
-div[data-baseweb="popover"]:has(div[data-baseweb="calendar"]),
-div[data-baseweb="popover"]:has(div[data-baseweb="calendar"]) > div,
-div[data-baseweb="calendar"],
-div[data-baseweb="calendar"] > div {{
-  background:{CARD} !important;
-  background-color:{CARD} !important;
-  color:{WHITE} !important;
-  border-color:{BORDER} !important;
-}}
-
-div[data-baseweb="calendar"] {{
-  padding:10px !important;
-  border:1px solid {BORDER} !important;
-  border-radius:10px !important;
-  box-shadow:0 12px 34px rgba(0,0,0,.58) !important;
-  overflow:hidden !important;
-}}
-
-div[data-baseweb="calendar"] table,
-div[data-baseweb="calendar"] thead,
-div[data-baseweb="calendar"] tbody,
-div[data-baseweb="calendar"] tr,
-div[data-baseweb="calendar"] th,
-div[data-baseweb="calendar"] td,
-div[data-baseweb="calendar"] [role="grid"],
-div[data-baseweb="calendar"] [role="row"],
-div[data-baseweb="calendar"] [role="gridcell"],
-div[data-baseweb="calendar"] [role="gridcell"] > div,
-div[data-baseweb="calendar"] [role="gridcell"] > span {{
-  background:transparent !important;
-  background-color:transparent !important;
-  border-color:transparent !important;
-}}
-
-div[data-baseweb="calendar"] header,
-div[data-baseweb="calendar"] header > div,
-div[data-baseweb="calendar"] [data-baseweb="typography"],
-div[data-baseweb="calendar"] [data-baseweb="typography"] *,
-div[data-baseweb="calendar"] [role="heading"],
-div[data-baseweb="calendar"] [role="heading"] *,
-div[data-baseweb="calendar"] select,
-div[data-baseweb="calendar"] option {{
-  background:{CARD} !important;
-  background-color:{CARD} !important;
-  color:{WHITE} !important;
-  -webkit-text-fill-color:{WHITE} !important;
-  opacity:1 !important;
-  font-weight:700 !important;
-}}
-
-div[data-baseweb="calendar"] [data-baseweb="select"],
-div[data-baseweb="calendar"] [data-baseweb="select"] > div,
-div[data-baseweb="calendar"] [data-baseweb="select"] div,
-div[data-baseweb="calendar"] [role="combobox"],
-div[data-baseweb="calendar"] [role="combobox"] * {{
-  background:{CARD2} !important;
-  background-color:{CARD2} !important;
-  color:{WHITE} !important;
-  -webkit-text-fill-color:{WHITE} !important;
-  border-color:{BORDER} !important;
-  opacity:1 !important;
-}}
-
-div[data-baseweb="calendar"] button {{
-  background:transparent !important;
-  background-color:transparent !important;
-  color:{WHITE} !important;
-  -webkit-text-fill-color:{WHITE} !important;
-  border-color:transparent !important;
-  border-radius:7px !important;
-  opacity:1 !important;
-}}
-
-div[data-baseweb="calendar"] button:hover {{
-  background:{CARD2} !important;
-  background-color:{CARD2} !important;
-}}
-
-div[data-baseweb="calendar"] button svg,
-div[data-baseweb="calendar"] svg {{
-  fill:{WHITE} !important;
-  color:{WHITE} !important;
-  opacity:1 !important;
-}}
-
-div[data-baseweb="calendar"] [role="columnheader"],
-div[data-baseweb="calendar"] [role="columnheader"] * {{
-  background:{CARD} !important;
-  background-color:{CARD} !important;
-  color:{MUTED} !important;
-  -webkit-text-fill-color:{MUTED} !important;
-  font-size:.75rem !important;
-  font-weight:700 !important;
-  opacity:1 !important;
-}}
-
-div[data-baseweb="calendar"] [role="gridcell"],
-div[data-baseweb="calendar"] [role="gridcell"] *,
-div[data-baseweb="calendar"] [aria-label*="Choose"],
-div[data-baseweb="calendar"] [aria-label*="Escolher"] {{
-  color:{WHITE} !important;
-  -webkit-text-fill-color:{WHITE} !important;
-  font-weight:600 !important;
-  opacity:1 !important;
-}}
-
-div[data-baseweb="calendar"] [role="gridcell"],
-div[data-baseweb="calendar"] [role="gridcell"] > div,
-div[data-baseweb="calendar"] [role="gridcell"] button {{
-  background:{CARD} !important;
-  background-color:{CARD} !important;
-  border:1px solid transparent !important;
-  border-radius:7px !important;
-}}
-
-div[data-baseweb="calendar"] [role="gridcell"]:hover,
-div[data-baseweb="calendar"] [role="gridcell"] > div:hover,
-div[data-baseweb="calendar"] [role="gridcell"] button:hover {{
-  background:{CARD2} !important;
-  background-color:{CARD2} !important;
-  border-color:{BORDER} !important;
-}}
-
-div[data-baseweb="calendar"] [aria-selected="true"],
-div[data-baseweb="calendar"] [aria-selected="true"] > div,
-div[data-baseweb="calendar"] [aria-selected="true"] button,
-div[data-baseweb="calendar"] button[aria-selected="true"] {{
-  background:{BRAND} !important;
-  background-color:{BRAND} !important;
-  color:#FFFFFF !important;
-  -webkit-text-fill-color:#FFFFFF !important;
-  border-color:{BRAND} !important;
-  font-weight:800 !important;
-  opacity:1 !important;
-}}
-
-div[data-baseweb="calendar"] [aria-current="date"],
-div[data-baseweb="calendar"] [aria-current="date"] > div,
-div[data-baseweb="calendar"] [aria-current="date"] button {{
-  color:{TEAL} !important;
-  -webkit-text-fill-color:{TEAL} !important;
-  border-color:{TEAL} !important;
-  font-weight:800 !important;
-}}
-
-div[data-baseweb="calendar"] [aria-disabled="true"],
-div[data-baseweb="calendar"] [aria-disabled="true"] *,
-div[data-baseweb="calendar"] [data-outside-month="true"],
-div[data-baseweb="calendar"] [data-outside-month="true"] * {{
-  background:{CARD} !important;
-  background-color:{CARD} !important;
-  color:#607892 !important;
-  -webkit-text-fill-color:#607892 !important;
-  opacity:1 !important;
-}}
-
-/* ── Botão ── */
-.stButton button {{
-  background:{BRAND} !important; color:{WHITE} !important;
-  border:none !important; border-radius:8px !important;
-  font-weight:600 !important; font-size:0.82rem !important;
-  width:100% !important; padding:6px 10px !important;
-  transition:opacity .2s !important;
-}}
-.stButton button:hover {{ opacity:.85 !important; }}
-
-/* ── Tabs (Compactas) ── */
-.stTabs [data-baseweb="tab-list"] {{
-  background:{CARD} !important;
-  border-bottom:1px solid {BORDER} !important;
-  padding:0 4px !important; gap:0 !important;
-  overflow-x:auto !important; flex-wrap:nowrap !important;
-}}
-.stTabs [data-baseweb="tab"] {{
-  background:transparent !important; border:none !important;
-  color:{MUTED} !important; font-weight:500 !important;
-  font-size:0.75rem !important; padding:6px 14px !important;
-  border-bottom:3px solid transparent !important;
-  white-space:nowrap !important;
-}}
-.stTabs [aria-selected="true"] {{
-  color:{TEAL} !important; font-weight:700 !important;
-  border-bottom:3px solid {TEAL} !important;
-}}
-.stTabs [data-baseweb="tab"]:hover {{ color:{WHITE} !important; }}
 
 /* ── KPI grid (Compacto) ── */
 .kpi-grid {{
@@ -347,7 +82,7 @@ div[data-baseweb="calendar"] [data-outside-month="true"] * {{
 .b-red    {{ background:rgba(230,57,70,.18);   color:{DANGER}; }}
 .b-orange {{ background:rgba(225,112,85,.18);  color:{ORANGE}; }}
 .b-gold   {{ background:rgba(253,203,110,.18); color:{GOLD};   }}
-.b-muted  {{ background:rgba(139,163,191,.12); color:{MUTED};  }}
+.b-muted  {{ background:rgba(148,163,184,.12); color:{MUTED};  }}
 .b-teal   {{ background:rgba(0,206,201,.18);   color:{TEAL};   }}
 
 /* ── Chart card (Compacto) ── */
@@ -441,21 +176,8 @@ div[data-baseweb="calendar"] [data-outside-month="true"] * {{
   animation:pulse 2s infinite; margin-right:5px; vertical-align:middle;
 }}
 
-/* ── Mobile: empilhar st.columns ── */
-@media(max-width:640px) {{
-  div[data-testid="stHorizontalBlock"] {{ flex-wrap:wrap !important; }}
-  div[data-testid="stHorizontalBlock"] > div[data-testid="stColumn"] {{
-    min-width:100% !important; flex:none !important;
-  }}
-  .block-container {{ padding:0.4rem 0.6rem 1.5rem !important; }}
-  .kpi-val {{ font-size:1.3rem !important; }}
-}}
-
 /* ── hr ── */
 hr {{ border-color:{BORDER} !important; margin:4px 0 8px !important; }}
-::-webkit-scrollbar {{ width:4px; height:4px; }}
-::-webkit-scrollbar-thumb {{ background:{BORDER}; border-radius:3px; }}
-::-webkit-scrollbar-track {{ background:transparent; }}
 </style>
 """, unsafe_allow_html=True)
 
@@ -605,7 +327,7 @@ def aba_hoje(df_raw, hoje):
     # Preparar base unificada de total por atendente
     tot_ag = df_h.groupby("Atendente").size()
 
-    # Linha 1: Gráficos de Atendentes (Canal e Módulo - Mapa de Calor)
+    # Linha 1: Gráficos de Atendentes
     r1c1, r1c2 = st.columns(2)
 
     with r1c1:
@@ -613,10 +335,7 @@ def aba_hoje(df_raw, hoje):
             st.markdown(co("📊 Atendimentos Hoje: Atendente × Canal"), unsafe_allow_html=True)
             df_at_or = df_h.groupby(["Atendente", "Origem"]).size().reset_index(name="Qtd")
             
-            # Adiciona o total ao lado do nome do atendente
             df_at_or["Atendente_Lbl"] = df_at_or["Atendente"].apply(lambda x: f"{x} [{tot_ag[x]}]")
-            
-            # Ordenar atendentes pelo total de chamados para manter o gráfico alinhado
             ordem_lbl = [f"{x} [{tot_ag[x]}]" for x in tot_ag.sort_values().index.tolist()]
             
             fig = px.bar(df_at_or, y="Atendente_Lbl", x="Qtd", color="Origem", orientation="h", text="Qtd",
@@ -627,7 +346,7 @@ def aba_hoje(df_raw, hoje):
             fig.update_layout(**pb(max(240, len(ordem_lbl)*35),
                 xaxis=dict(showgrid=False), yaxis=dict(showgrid=False),
                 yaxis_title="", xaxis_title="",
-                legend=dict(orientation="h", y=1.12, x=0, title="", font=dict(color=WHITE, size=10))
+                legend=dict(orientation="v", title="", font=dict(color=WHITE, size=10))
             ))
             fig.update_layout(margin=dict(t=25, b=6, l=6, r=6)) 
             
@@ -644,13 +363,11 @@ def aba_hoje(df_raw, hoje):
             df_hm = df_h.copy()
             df_hm["Mod_x"] = df_hm["Modulo"].apply(lambda x: x if x in top_mod_h else "Outros")
             
-            # Aplica a mesma regra de rótulo para alinhar perfeitamente com o gráfico ao lado
             df_hm["Atendente_Lbl"] = df_hm["Atendente"].apply(lambda x: f"{x} [{tot_ag[x]}]")
             
             piv_h = df_hm.groupby(["Atendente_Lbl", "Mod_x"]).size().reset_index(name="Qtd")\
                       .pivot(index="Atendente_Lbl", columns="Mod_x", values="Qtd").fillna(0)
             
-            # Reordena o índice para bater exatamente com as barras ao lado
             piv_h = piv_h.reindex(ordem_lbl).fillna(0)
             
             fig_mod = px.imshow(piv_h, text_auto=True, aspect="auto",
@@ -659,7 +376,7 @@ def aba_hoje(df_raw, hoje):
             fig_mod.update_traces(textfont=dict(color=WHITE))
             fig_mod.update_layout(**pb(max(240, len(ordem_lbl)*35),
                 xaxis_title="", yaxis_title="",
-                xaxis=dict(side="top") # Coloca os nomes dos módulos no topo para não disputar espaço
+                xaxis=dict(side="top") 
             ))
             fig_mod.update_layout(margin=dict(t=25, b=6, l=6, r=6))
             
@@ -728,26 +445,6 @@ def aba_hoje(df_raw, hoje):
             st.markdown(cc(), unsafe_allow_html=True)
             st.warning(f"Gráfico indisponível: {e}")
 
-    # ===== AUDITORIA DE DADOS =====
-    st.markdown("<br>", unsafe_allow_html=True)
-    with st.expander("🔍 Auditoria e Depuração (Comparar com Excel)", expanded=False):
-        st.markdown("**1. Query SQL Executada no Banco:**")
-        st.code("""
-SELECT
-    Sac, 
-    CONVERT(VARCHAR(10), Data_abertura, 103) + ' ' + CONVERT(VARCHAR(8), Data_abertura, 108) AS Data_abertura,
-    Dia_abertura, Mes_abertura, Ano_abertura,
-    CONVERT(VARCHAR(10), [Data Solucao], 103) + ' ' + CONVERT(VARCHAR(8), [Data Solucao], 108) AS Data_Solucao,
-    [Cliente Codigo] AS Cliente_Codigo, Cliente, Contato,
-    Assunto, Motivo, Motivocodigo, Modulo, Situacao, Atendente, Origem,
-    Finalizado_Mesmo_Dia, Tipo
-FROM sgrp_atendimentos_geral
-WHERE Ano_abertura >= 2020;
-        """, language="sql")
-        
-        st.markdown("**2. Dados Brutos (Somente chamados ABERTOS hoje):**")
-        st.dataframe(df_h.reset_index(drop=True), width="stretch")
-
 
 # ══════════════════════════════════════════════════════════════════════════════
 #  NOVA ABA — POR HORA
@@ -759,7 +456,6 @@ def aba_por_hora(df_base, hoje):
     with c_filt:
         data_filtro = st.date_input("Escolha o dia para analisar o fluxo", value=hoje, format="DD/MM/YYYY", key="filtro_hora")
     
-    # Aplica o filtro de data ao df base (que já passou pelos filtros globais de Atendente, Módulo, etc)
     df_dia = df_base[df_base["Data_abertura"].dt.date == data_filtro].copy()
     
     if df_dia.empty:
@@ -770,16 +466,13 @@ def aba_por_hora(df_base, hoje):
         </div>""", unsafe_allow_html=True)
         return
 
-    # Extrair a Hora
     df_dia["Hora_Int"] = df_dia["Data_abertura"].dt.hour
     df_dia["Hora"] = df_dia["Hora_Int"].apply(lambda x: f"{x:02d}:00")
     
-    # Agrupamentos para os KPIs
     df_hora = df_dia.groupby("Hora").size().reset_index(name="Qtd")
     pico_hora = df_hora.iloc[df_hora['Qtd'].idxmax()]['Hora'] if not df_hora.empty else "N/A"
     pico_qtd = df_hora['Qtd'].max() if not df_hora.empty else 0
     
-    # Cálculo da Média por Hora (Total de chamados / Número de horas únicas que tiveram atividade)
     horas_ativas = df_dia["Hora"].nunique()
     media_hora = len(df_dia) / horas_ativas if horas_ativas > 0 else 0
     
@@ -799,7 +492,6 @@ def aba_por_hora(df_base, hoje):
             fig1 = px.bar(dh_at, x="Hora", y="Qtd", color="Atendente", text="Qtd",
                           color_discrete_sequence=CORES)
             fig1.update_traces(textposition="inside", textfont=dict(size=10, color=WHITE))
-            # Legenda fixada na lateral direita na vertical para nunca sobrepor o gráfico
             fig1.update_layout(**pb(320, xaxis_title="", yaxis_title="Volume de Chamados",
                                 legend=dict(orientation="v", title="", font=dict(color=WHITE, size=9))))
             st.plotly_chart(fig1, use_container_width=True)
@@ -817,7 +509,6 @@ def aba_por_hora(df_base, hoje):
             fig2 = px.bar(dh_mod, x="Hora", y="Qtd", color="Mod_x", text="Qtd",
                           color_discrete_sequence=CORES)
             fig2.update_traces(textposition="inside", textfont=dict(size=10, color=WHITE))
-            # Legenda fixada na lateral direita na vertical
             fig2.update_layout(**pb(320, xaxis_title="", yaxis_title="Volume de Chamados",
                                 legend=dict(orientation="v", title="", font=dict(color=WHITE, size=9))))
             st.plotly_chart(fig2, use_container_width=True)
@@ -827,7 +518,6 @@ def aba_por_hora(df_base, hoje):
 
     st.markdown('<span class="sec-t">📋 Detalhamento Cronológico dos Chamados</span>', unsafe_allow_html=True)
     
-    # Campo de Filtro Exclusivo e Inteligente acima da tabela
     col_f, _ = st.columns([3, 7])
     with col_f:
         busca = st.text_input("🔍 Filtrar na tabela abaixo:", placeholder="Busque por SAC, Cliente, Assunto...", key="busca_hora")
@@ -835,10 +525,8 @@ def aba_por_hora(df_base, hoje):
     cols_disp = ["Hora", "Sac", "Atendente", "Cliente", "Modulo", "Situacao", "Origem", "Assunto"]
     valid_cols = [c for c in cols_disp if c in df_dia.columns]
     
-    # Aplica a ordenação pela hora e depois seleciona as colunas visíveis
     df_show = df_dia.sort_values(["Hora_Int", "Sac"])[valid_cols].reset_index(drop=True)
     
-    # Se o usuário digitou algo na busca, filtra o dataframe em todas as colunas
     if busca:
         busca_lower = busca.lower()
         mask = df_show.astype(str).apply(lambda x: x.str.lower().str.contains(busca_lower)).any(axis=1)
