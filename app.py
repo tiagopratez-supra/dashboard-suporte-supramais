@@ -25,7 +25,6 @@ st.set_page_config(
 components.html('<script>setTimeout(()=>window.parent.location.reload(),1800000)</script>', height=0)
 
 # ── PALETA ─────────────────────────────────────────────────────────────────────
-# Cores mantidas apenas para os gráficos Plotly e componentes HTML customizados
 BG     = "#0F172A"
 CARD   = "#1E293B"
 CARD2  = "#334155"
@@ -444,6 +443,26 @@ def aba_hoje(df_raw, hoje):
         except Exception as e:
             st.markdown(cc(), unsafe_allow_html=True)
             st.warning(f"Gráfico indisponível: {e}")
+
+    # ===== AUDITORIA DE DADOS =====
+    st.markdown("<br>", unsafe_allow_html=True)
+    with st.expander("🔍 Auditoria e Depuração (Comparar com Excel)", expanded=False):
+        st.markdown("**1. Query SQL Executada no Banco:**")
+        st.code("""
+SELECT
+    Sac, 
+    CONVERT(VARCHAR(10), Data_abertura, 103) + ' ' + CONVERT(VARCHAR(8), Data_abertura, 108) AS Data_abertura,
+    Dia_abertura, Mes_abertura, Ano_abertura,
+    CONVERT(VARCHAR(10), [Data Solucao], 103) + ' ' + CONVERT(VARCHAR(8), [Data Solucao], 108) AS Data_Solucao,
+    [Cliente Codigo] AS Cliente_Codigo, Cliente, Contato,
+    Assunto, Motivo, Motivocodigo, Modulo, Situacao, Atendente, Origem,
+    Finalizado_Mesmo_Dia, Tipo
+FROM sgrp_atendimentos_geral
+WHERE Ano_abertura >= 2020;
+        """, language="sql")
+        
+        st.markdown("**2. Dados Brutos (Somente chamados ABERTOS hoje):**")
+        st.dataframe(df_h.reset_index(drop=True), width="stretch")
 
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -911,7 +930,7 @@ def aba_atendentes(df):
 # ══════════════════════════════════════════════════════════════════════════════
 #  ABA 4 — SITUAÇÃO DOS CHAMADOS
 # ══════════════════════════════════════════════════════════════════════════════
-def aba_situacao(df):
+def aba_situacao(df, df_raw):
     c1, c2, c3 = st.columns([1,1,2])
 
     with c1:
@@ -1021,6 +1040,31 @@ def aba_situacao(df):
                     st.warning(f"Gráfico indisponível: {e}")
     except Exception as e:
         st.warning(f"Seção de backlog indisponível: {e}")
+
+    # ================= NOVO: SEÇÃO DE FEEDBACKS =================
+    st.markdown('<span class="sec-t">⭐ Feedbacks Acumulados por Atendente (Ignora Filtros)</span>', unsafe_allow_html=True)
+    try:
+        # Busca exclusiva no campo Situação do banco completo (df_raw)
+        mask_fb = df_raw["Situacao"].astype(str).str.contains("feedback", case=False, na=False)
+        df_fb = df_raw[mask_fb]
+        
+        if not df_fb.empty:
+            st.markdown(co("🏆 Total Histórico de Feedbacks (Base Completa)"), unsafe_allow_html=True)
+            df_fb_ag = df_fb.groupby("Atendente").size().reset_index(name="Qtd").sort_values("Qtd", ascending=True)
+            
+            fig_fb = px.bar(df_fb_ag, x="Qtd", y="Atendente", orientation="h", text="Qtd",
+                           color="Qtd", color_continuous_scale=[[0, CARD2], [1, GOLD]])
+            fig_fb.update_coloraxes(showscale=False)
+            fig_fb.update_traces(textposition="outside", cliponaxis=False, textfont=dict(color=WHITE))
+            fig_fb.update_layout(**pb(max(250, len(df_fb_ag)*32),
+                xaxis=dict(showgrid=False), yaxis=dict(showgrid=False),
+                xaxis_title="", yaxis_title=""))
+            st.plotly_chart(fig_fb, use_container_width=True)
+            st.markdown(cc(), unsafe_allow_html=True)
+        else:
+            st.info("Nenhum registro com a Situação 'Feedback' foi encontrado no banco de dados.")
+    except Exception as e:
+        st.warning(f"Erro ao gerar gráfico de Feedbacks: {e}")
 
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -1487,7 +1531,7 @@ def main():
     with tabs[2]: aba_resumo(df)
     with tabs[3]: aba_clientes(df)
     with tabs[4]: aba_atendentes(df)
-    with tabs[5]: aba_situacao(df)
+    with tabs[5]: aba_situacao(df, df_raw)
     with tabs[6]: aba_sla(df)
     with tabs[7]: aba_alertas(df, df_raw)
 
