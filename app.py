@@ -278,6 +278,46 @@ def carregar_dados() -> pd.DataFrame:
     df["TMR_h"] = (df["Data_Solucao"] - df["Data_abertura"]).dt.total_seconds() / 3600
     return df
 
+@st.cache_data(ttl=3600, show_spinner="Carregando contratos vigentes…")
+def carregar_contratos() -> pd.DataFrame:
+    cfg = st.secrets["database"]
+    srv = cfg["server"]
+    if "," in srv:
+        host, port = srv.split(",", 1)
+        port = int(port)
+    else:
+        host, port = srv, 1433
+    conn = pymssql.connect(
+        server=host, port=port,
+        database=cfg["database"],
+        user=cfg["username"],
+        password=cfg["password"],
+        login_timeout=30,
+    )
+    SQL_QUERY = """
+    SELECT 
+        ct.fk_cliente_fornecedor AS CLIENTE_codigo, 
+        cf.nome AS RAZAO, 
+        cf.cnpj AS CNPJ,
+        CASE ct.id_situacao 
+            WHEN 1 THEN 'VIGENTE' 
+            WHEN 2 THEN 'FINALIZADO' 
+            WHEN 3 THEN 'RESCINDIDO' 
+            WHEN 4 THEN 'SUSPENSO'
+        END AS SITUACAO,
+        fl.clifor_codigo AS cod_matrix
+    FROM sgc.dbo.contrato ct
+    JOIN sgc.dbo.cliente_fornecedor cf ON cf.codigo = ct.fk_cliente_fornecedor
+    JOIN sgc.dbo.cidade c ON c.codigo = cf.cid_codigo
+    JOIN sgc.dbo.tipo_contrato tc ON tc.codigo = ct.fk_tipo_contrato
+    LEFT JOIN sgc.dbo.filial fl ON fl.clifor_codigo_filial = cf.codigo
+    WHERE ct.id_situacao = 1
+    ORDER BY cf.nome
+    """
+    df = pd.read_sql(SQL_QUERY, conn)
+    conn.close()
+    return df
+
 
 # ══════════════════════════════════════════════════════════════════════════════
 #  ABA 0 — HOJE
@@ -1371,6 +1411,65 @@ def aba_alertas(df, df_raw):
 
 
 # ══════════════════════════════════════════════════════════════════════════════
+#  ABA 8 — CLIENTES INATIVOS (Radar)
+# ══════════════════════════════════════════════════════════════════════════════
+def aba_inativos(df_raw, df_contratos):
+    st.markdown('<span class="sec-t">📡 Radar de Inatividade (Customer Success)</span>', unsafe_allow_html=True)
+    
+    # 1. Tratamento de IDs e criação da chave do Grupo (Matriz)
+    df_c = df_contratos.copy()
+    df_c['CLIENTE_codigo'] = df_c['CLIENTE_codigo'].astype(str).str.replace(r'\.0$', '', regex=True)
+    df_c['cod_matrix'] = df_c['cod_matrix'].astype(str).str.replace(r'\.0$', '', regex=True).replace('nan', None)
+    
+    # Se tem cod_matrix, ele é o grupo. Se não, o próprio cliente é o grupo.
+    df_c['ID_Grupo'] = df_c['cod_matrix'].combine_first(df_c['CLIENTE_codigo'])
+    
+    # 2. Mapear tickets para o Grupo
+    map_grupo = df_c.set_index('CLIENTE_codigo')['ID_Grupo'].to_dict()
+    df_t = df_raw.copy()
+    df_t['Cliente_Codigo'] = df_t['Cliente_Codigo'].astype(str).str.replace(r'\.0$', '', regex=True)
+    df_t['ID_Grupo'] = df_t['Cliente_Codigo'].map(map_grupo).fillna(df_t['Cliente_Codigo'])
+    
+    # 3. Último contato geral do grupo
+    ultimos = df_t.groupby('ID_Grupo')['Data_abertura'].max().reset_index()
+    ultimos.rename(columns={'Data_abertura': 'Ultimo_Contato'}, inplace=True)
+    
+    # 4. Juntar as bases e calcular inatividade
+    df_view = df_c.merge(ultimos, on='ID_Grupo', how='left')
+    hoje = pd.Timestamp(date.today())
+    df_view['Dias_Inativo'] = (hoje - df_view['Ultimo_Contato']).dt.days
+    
+    # Filtro Interativo na tela
+    dias_filtro = st.slider("⚠️ Mostrar clientes vigentes sem contato há mais de (dias):", 
+                            min_value=0, max_value=365, value=60, step=15)
+    
+    # Filtrar apenas o recorte selecionado
+    df_view = df_view[df_view['Dias_Inativo'] >= dias_filtro].sort_values('Dias_Inativo', ascending=False)
+    
+    # 5. Formatar Data Padrão BR e exibir
+    df_view['Último Contato'] = df_view['Ultimo_Contato'].dt.strftime('%d/%m/%Y').fillna('Sem registro histórico')
+    df_view['Dias Inativo'] = df_view['Dias_Inativo'].fillna(9999).astype(int).astype(str).replace('9999', '∞')
+    
+    # KPIs da aba
+    total_vigentes = len(df_c)
+    total_inativos = len(df_view)
+    taxa = (total_inativos / total_vigentes * 100) if total_vigentes > 0 else 0
+    
+    st.markdown(f"""
+    <div class="kpi-grid" style="grid-template-columns:repeat(3,1fr)">
+      {kpi("Base Vigente", f"{total_vigentes:,}", "contratos ativos", "🏢", TEAL)}
+      {kpi("Inativos", f"{total_inativos:,}", f"há +{dias_filtro} dias", "⚠️", ORANGE if taxa < 30 else DANGER)}
+      {kpi("Taxa de Risco", f"{taxa:.1f}%", "da base sem contato", "📉", DANGER if taxa > 30 else GREEN)}
+    </div>
+    """, unsafe_allow_html=True)
+    
+    st.markdown(co(f"📋 Contratos Vigentes — Sem contato há mais de {dias_filtro} dias"), unsafe_allow_html=True)
+    cols = ['CLIENTE_codigo', 'RAZAO', 'CNPJ', 'SITUACAO', 'Último Contato', 'Dias Inativo']
+    st.dataframe(df_view[cols].reset_index(drop=True), use_container_width=True, height=500)
+    st.markdown(cc(), unsafe_allow_html=True)
+
+
+# ══════════════════════════════════════════════════════════════════════════════
 #  MAIN
 # ══════════════════════════════════════════════════════════════════════════════
 def main():
@@ -1398,6 +1497,7 @@ def main():
 
     try:
         df_raw = carregar_dados()
+        df_contratos = carregar_contratos()
     except Exception as e:
         st.error(f"❌ Erro ao conectar: `{e}`")
         st.stop()
@@ -1524,6 +1624,7 @@ def main():
         "🎫 Situação",
         "📈 SLA & KPIs",
         "🚨 Alertas & Gestão",
+        "📡 Radar Inativos",
     ])
 
     with tabs[0]: aba_hoje(df_raw, hoje)
@@ -1534,6 +1635,7 @@ def main():
     with tabs[5]: aba_situacao(df, df_raw)
     with tabs[6]: aba_sla(df)
     with tabs[7]: aba_alertas(df, df_raw)
+    with tabs[8]: aba_inativos(df_raw, df_contratos)
 
 
 if __name__ == "__main__":
