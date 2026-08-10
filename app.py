@@ -1,6 +1,6 @@
 # =============================================================================
 # Central de Suporte — SupraMAIS  |  Command Center
-# Stack: Streamlit + pymssql + pandas + plotly
+# Stack: Streamlit + pyodbc + pandas + plotly
 # =============================================================================
 
 import streamlit as st
@@ -12,8 +12,6 @@ import plotly.graph_objects as go
 from datetime import date, datetime, timedelta
 from zoneinfo import ZoneInfo
 import os, warnings
-import calendar
-
 warnings.filterwarnings("ignore")
 
 st.set_page_config(
@@ -25,74 +23,273 @@ st.set_page_config(
 components.html('<script>setTimeout(()=>window.parent.location.reload(),1800000)</script>', height=0)
 
 # ── PALETA ─────────────────────────────────────────────────────────────────────
-BG     = "#0F172A"
-CARD   = "#1E293B"
-CARD2  = "#334155"
+BG     = "#0D1B2A"
+CARD   = "#112240"
+CARD2  = "#1A3258"
 BRAND  = "#CC2020"
 TEAL   = "#00CEC9"
 GREEN  = "#00B894"
 ORANGE = "#E17055"
 GOLD   = "#FDCB6E"
 PURPLE = "#A29BFE"
-WHITE  = "#F8FAFC"
-MUTED  = "#94A3B8"
-BORDER = "#334155"
+WHITE  = "#E8F4FD"
+MUTED  = "#8BA3BF"
+BORDER = "#1E3A5F"
 DANGER = "#E63946"
 CORES  = [BRAND, TEAL, ORANGE, GOLD, GREEN, PURPLE, "#FD79A8", "#74B9FF", "#55EFC4", "#DFE6E9"]
 
-# ── CSS LIMPO (Apenas Componentes Customizados) ────────────────────────────────
+# ── CSS ────────────────────────────────────────────────────────────────────────
 st.markdown(f"""
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
 
 * {{ font-family:'Inter',sans-serif !important; box-sizing:border-box; }}
-.block-container {{ padding:0.4rem 1.2rem 1rem !important; max-width:100% !important; }}
-header[data-testid="stHeader"] {{ background:transparent !important; }}
 
-/* ── KPI grid (Compacto) ── */
+/* ── Background ── */
+.stApp {{ background:{BG} !important; }}
+.block-container {{ padding:0.5rem 1.2rem 2rem !important; max-width:100% !important; }}
+header[data-testid="stHeader"] {{ background:transparent !important; }}
+section[data-testid="stSidebar"] {{ background:{CARD} !important; border-right:1px solid {BORDER} !important; }}
+
+/* ── Textos globais ── */
+h1,h2,h3,h4,h5,p {{ color:{WHITE} !important; }}
+label {{ color:{MUTED} !important; font-size:0.74rem !important; font-weight:600 !important;
+         text-transform:uppercase; letter-spacing:0.4px; }}
+
+/* ── MULTISELECT & SELECT — dark fix ── */
+div[data-testid="stMultiSelect"] > div,
+div[data-testid="stSelectbox"] > div {{
+  background:{CARD2} !important;
+  border:1px solid {BORDER} !important;
+  border-radius:8px !important;
+}}
+div[data-testid="stMultiSelect"] > div > div,
+div[data-testid="stSelectbox"] > div > div {{
+  background:{CARD2} !important;
+  color:{WHITE} !important;
+}}
+div[data-testid="stMultiSelect"] input,
+div[data-testid="stSelectbox"] input {{
+  color:{WHITE} !important;
+  caret-color:{WHITE} !important;
+  background:transparent !important;
+}}
+div[data-testid="stMultiSelect"] input::placeholder {{
+  color:{MUTED} !important; opacity:1 !important;
+}}
+[data-baseweb="select"] > div {{
+  background:{CARD2} !important;
+  border-color:{BORDER} !important;
+}}
+[data-baseweb="select"] span {{ color:{WHITE} !important; }}
+[data-baseweb="popover"] > div {{ background:{CARD} !important; border:1px solid {BORDER} !important; }}
+ul[role="listbox"] {{ background:{CARD} !important; }}
+li[role="option"] {{ background:{CARD} !important; color:{WHITE} !important; }}
+li[role="option"]:hover {{ background:{CARD2} !important; }}
+li[role="option"][aria-selected="true"] {{ background:{CARD2} !important; color:{TEAL} !important; }}
+[data-baseweb="tag"] {{ background:{BRAND} !important; border:none !important; border-radius:6px !important; }}
+[data-baseweb="tag"] span {{ color:{WHITE} !important; }}
+[data-baseweb="tag"] button svg {{ fill:{WHITE} !important; }}
+
+/* ── DATE INPUT — campo principal ── */
+div[data-testid="stDateInput"] > div,
+div[data-testid="stDateInput"] [data-baseweb="base-input"],
+div[data-testid="stDateInput"] [data-baseweb="input"] {{
+  background:{CARD2} !important;
+  border:1px solid {BORDER} !important;
+  border-radius:8px !important;
+}}
+div[data-testid="stDateInput"] input {{
+  color:{WHITE} !important;
+  background:transparent !important;
+  -webkit-text-fill-color:{WHITE} !important;
+  opacity:1 !important;
+}}
+div[data-testid="stDateInput"] input::placeholder {{
+  color:{MUTED} !important;
+  opacity:1 !important;
+}}
+div[data-testid="stDateInput"] p,
+div[data-testid="stDateInput"] span,
+div[data-testid="stDateInput"] div[role="combobox"] {{
+  color:{WHITE} !important;
+  -webkit-text-fill-color:{WHITE} !important;
+}}
+
+/* ── CALENDÁRIO DO DATE PICKER — correção completa ── */
+/* Container externo e painel interno */
+div[data-baseweb="popover"]:has(div[data-baseweb="calendar"]),
+div[data-baseweb="popover"]:has(div[data-baseweb="calendar"]) > div,
+div[data-baseweb="calendar"],
+div[data-baseweb="calendar"] > div {{
+  background: {CARD} !important;
+  background-color: {CARD} !important;
+  color: {WHITE} !important;
+  border-color: {BORDER} !important;
+}}
+
+div[data-baseweb="calendar"] {{
+  padding: 10px !important;
+  border: 1px solid {BORDER} !important;
+  border-radius: 10px !important;
+  box-shadow: 0 12px 34px rgba(0,0,0,.58) !important;
+  overflow: hidden !important;
+}}
+
+/* ── 1. CABEÇALHO (MÊS/ANO E SETAS) ── */
+div[data-baseweb="calendar"] header span,
+div[data-baseweb="calendar"] header div,
+div[data-baseweb="calendar"] header [data-baseweb="typography"],
+div[data-baseweb="calendar"] [role="heading"],
+div[data-baseweb="calendar"] [data-baseweb="select"] div,
+div[data-baseweb="calendar"] [role="combobox"] * {{
+  background: transparent !important;
+  color: {WHITE} !important;
+  -webkit-text-fill-color: {WHITE} !important;
+  font-weight: 700 !important;
+}}
+div[data-baseweb="calendar"] button svg {{ fill: {WHITE} !important; }}
+
+/* ── 2. LIMPEZA TOTAL DE FUNDOS DA GRADE ── */
+div[data-baseweb="calendar"] table,
+div[data-baseweb="calendar"] thead,
+div[data-baseweb="calendar"] tbody,
+div[data-baseweb="calendar"] tr,
+div[data-baseweb="calendar"] th,
+div[data-baseweb="calendar"] td,
+div[data-baseweb="calendar"] [role="grid"],
+div[data-baseweb="calendar"] [role="row"],
+div[data-baseweb="calendar"] [role="gridcell"],
+div[data-baseweb="calendar"] [role="gridcell"] > div,
+div[data-baseweb="calendar"] [role="gridcell"] button {{
+  background: transparent !important;
+  background-color: transparent !important;
+  border: none !important;
+}}
+
+/* ── 3. ESTILO APENAS DOS DIAS VÁLIDOS ── */
+div[data-baseweb="calendar"] [role="gridcell"] button {{
+  color: {WHITE} !important;
+  -webkit-text-fill-color: {WHITE} !important;
+  border-radius: 7px !important;
+  font-weight: 600 !important;
+}}
+div[data-baseweb="calendar"] [role="gridcell"] button:hover {{
+  background-color: {CARD2} !important;
+}}
+div[data-baseweb="calendar"] button[aria-selected="true"] {{
+  background-color: {BRAND} !important;
+  color: #FFFFFF !important;
+  -webkit-text-fill-color: #FFFFFF !important;
+  font-weight: 800 !important;
+}}
+div[data-baseweb="calendar"] button[aria-current="date"] {{
+  color: {TEAL} !important;
+  -webkit-text-fill-color: {TEAL} !important;
+  font-weight: 800 !important;
+}}
+
+/* ── 4. OCULTAR QUADRADOS VAZIOS DOS OUTROS MESES ── */
+div[data-baseweb="calendar"] [role="gridcell"]:empty,
+div[data-baseweb="calendar"] [role="gridcell"] > div:empty,
+div[data-baseweb="calendar"] button[aria-disabled="true"],
+div[data-baseweb="calendar"] [data-outside-month="true"] {{
+  opacity: 0 !important; 
+  pointer-events: none !important;
+}}
+
+/* ── 5. TRADUÇÃO FORÇADA DOS DIAS DA SEMANA ── */
+div[data-baseweb="calendar"] [role="columnheader"] * {{
+  display: none !important; /* Esconde as letras originais (Su, Mo...) */
+}}
+div[data-baseweb="calendar"] [role="columnheader"]::after {{
+  font-size: 0.75rem !important;
+  color: {MUTED} !important;
+  font-weight: 700 !important;
+  display: block;
+  text-align: center;
+}}
+div[data-baseweb="calendar"] [role="columnheader"]:nth-child(1)::after {{ content: "Dom"; }}
+div[data-baseweb="calendar"] [role="columnheader"]:nth-child(2)::after {{ content: "Seg"; }}
+div[data-baseweb="calendar"] [role="columnheader"]:nth-child(3)::after {{ content: "Ter"; }}
+div[data-baseweb="calendar"] [role="columnheader"]:nth-child(4)::after {{ content: "Qua"; }}
+div[data-baseweb="calendar"] [role="columnheader"]:nth-child(5)::after {{ content: "Qui"; }}
+div[data-baseweb="calendar"] [role="columnheader"]:nth-child(6)::after {{ content: "Sex"; }}
+div[data-baseweb="calendar"] [role="columnheader"]:nth-child(7)::after {{ content: "Sáb"; }}
+
+/* ── Botão ── */
+.stButton button {{
+  background:{BRAND} !important; color:{WHITE} !important;
+  border:none !important; border-radius:8px !important;
+  font-weight:600 !important; font-size:0.82rem !important;
+  width:100% !important; padding:8px 12px !important;
+  transition:opacity .2s !important;
+}}
+.stButton button:hover {{ opacity:.85 !important; }}
+
+/* ── Tabs ── */
+.stTabs [data-baseweb="tab-list"] {{
+  background:{CARD} !important;
+  border-bottom:1px solid {BORDER} !important;
+  padding:0 4px !important; gap:0 !important;
+  overflow-x:auto !important; flex-wrap:nowrap !important;
+}}
+.stTabs [data-baseweb="tab"] {{
+  background:transparent !important; border:none !important;
+  color:{MUTED} !important; font-weight:500 !important;
+  font-size:0.82rem !important; padding:10px 16px !important;
+  border-bottom:3px solid transparent !important;
+  white-space:nowrap !important;
+}}
+.stTabs [aria-selected="true"] {{
+  color:{TEAL} !important; font-weight:700 !important;
+  border-bottom:3px solid {TEAL} !important;
+}}
+.stTabs [data-baseweb="tab"]:hover {{ color:{WHITE} !important; }}
+
+/* ── KPI grid ── */
 .kpi-grid {{
   display:grid;
-  grid-template-columns:repeat(7,1fr);
-  gap:8px; margin-bottom:8px;
+  grid-template-columns:repeat(6,1fr);
+  gap:10px; margin-bottom:14px;
 }}
-@media(max-width:1200px) {{ .kpi-grid {{ grid-template-columns:repeat(4,1fr); }} }}
 @media(max-width:900px)  {{ .kpi-grid {{ grid-template-columns:repeat(3,1fr); }} }}
 @media(max-width:600px)  {{ .kpi-grid {{ grid-template-columns:repeat(2,1fr); }} }}
 @media(max-width:380px)  {{ .kpi-grid {{ grid-template-columns:1fr; }} }}
 
 .kpi-card {{
   background:{CARD}; border:1px solid {BORDER};
-  border-radius:10px; padding:8px 12px 6px;
-  position:relative; overflow:hidden; min-height:74px;
+  border-radius:12px; padding:13px 14px 11px;
+  position:relative; overflow:hidden; min-height:96px;
 }}
-.kpi-glow {{ position:absolute; top:0; left:0; right:0; height:3px; border-radius:10px 10px 0 0; }}
-.kpi-icon {{ position:absolute; right:8px; top:8px; font-size:1.3rem; opacity:0.08; }}
+.kpi-glow {{ position:absolute; top:0; left:0; right:0; height:3px; border-radius:12px 12px 0 0; }}
+.kpi-icon {{ position:absolute; right:11px; top:10px; font-size:1.6rem; opacity:0.08; }}
 .kpi-label {{
-  font-size:0.58rem; font-weight:700; letter-spacing:0.4px;
-  text-transform:uppercase; color:{MUTED} !important; margin-bottom:2px;
+  font-size:0.62rem; font-weight:700; letter-spacing:0.6px;
+  text-transform:uppercase; color:{MUTED} !important; margin-bottom:5px;
 }}
-.kpi-val {{ font-size:1.4rem; font-weight:800; color:{WHITE} !important; line-height:1; }}
-.kpi-sub {{ font-size:0.60rem; color:{MUTED} !important; margin-top:2px; }}
+.kpi-val {{ font-size:1.75rem; font-weight:800; color:{WHITE} !important; line-height:1; }}
+.kpi-sub {{ font-size:0.65rem; color:{MUTED} !important; margin-top:4px; }}
 .kpi-badge {{
-  display:inline-block; padding:1px 6px; border-radius:20px;
-  font-size:0.55rem; font-weight:700; margin-top:2px;
+  display:inline-block; padding:2px 7px; border-radius:20px;
+  font-size:0.62rem; font-weight:700; margin-top:3px;
 }}
 .b-green  {{ background:rgba(0,184,148,.18);  color:{GREEN};  }}
 .b-red    {{ background:rgba(230,57,70,.18);   color:{DANGER}; }}
 .b-orange {{ background:rgba(225,112,85,.18);  color:{ORANGE}; }}
 .b-gold   {{ background:rgba(253,203,110,.18); color:{GOLD};   }}
-.b-muted  {{ background:rgba(148,163,184,.12); color:{MUTED};  }}
+.b-muted  {{ background:rgba(139,163,191,.12); color:{MUTED};  }}
 .b-teal   {{ background:rgba(0,206,201,.18);   color:{TEAL};   }}
 
-/* ── Chart card (Compacto) ── */
+/* ── Chart card ── */
 .chart-card {{
   background:{CARD}; border:1px solid {BORDER};
-  border-radius:10px; padding:10px 12px 6px; margin-bottom:8px;
+  border-radius:12px; padding:14px 14px 8px; margin-bottom:12px;
 }}
 .chart-title {{
-  font-size:0.65rem; font-weight:700; text-transform:uppercase;
+  font-size:0.68rem; font-weight:700; text-transform:uppercase;
   letter-spacing:0.5px; color:{MUTED} !important;
-  border-bottom:1px solid {BORDER}; padding-bottom:4px; margin-bottom:6px;
+  border-bottom:1px solid {BORDER}; padding-bottom:7px; margin-bottom:9px;
 }}
 
 /* ── Section title ── */
@@ -100,7 +297,7 @@ header[data-testid="stHeader"] {{ background:transparent !important; }}
   font-size:0.68rem; font-weight:700; text-transform:uppercase;
   letter-spacing:0.8px; color:{MUTED} !important;
   border-left:3px solid {TEAL}; padding-left:8px;
-  margin:10px 0 6px; display:block;
+  margin:16px 0 10px; display:block;
 }}
 
 /* ── Tooltip ── */
@@ -117,16 +314,16 @@ header[data-testid="stHeader"] {{ background:transparent !important; }}
 
 /* ── Filtro bar ── */
 .filter-bar-title {{
-  font-size:0.62rem; font-weight:700; text-transform:uppercase;
+  font-size:0.65rem; font-weight:700; text-transform:uppercase;
   letter-spacing:0.6px; color:{TEAL} !important;
-  display:flex; align-items:center; gap:6px; margin-bottom:4px;
+  display:flex; align-items:center; gap:6px; margin-bottom:10px;
 }}
 
 /* ── Alerta cards ── */
 .alert-card {{
   background:rgba(230,57,70,.08); border:1px solid rgba(230,57,70,.25);
   border-left:4px solid {DANGER}; border-radius:10px;
-  padding:8px 12px; margin-bottom:6px;
+  padding:10px 13px; margin-bottom:7px;
 }}
 .alert-warn {{
   background:rgba(253,203,110,.07); border:1px solid rgba(253,203,110,.2);
@@ -136,28 +333,28 @@ header[data-testid="stHeader"] {{ background:transparent !important; }}
   background:rgba(0,206,201,.07); border:1px solid rgba(0,206,201,.18);
   border-left-color:{TEAL};
 }}
-.alert-title {{ font-size:0.75rem; font-weight:700; color:{WHITE} !important; }}
-.alert-sub   {{ font-size:0.68rem; color:{MUTED} !important; margin-top:2px; line-height:1.4; }}
+.alert-title {{ font-size:0.79rem; font-weight:700; color:{WHITE} !important; }}
+.alert-sub   {{ font-size:0.70rem; color:{MUTED} !important; margin-top:2px; line-height:1.4; }}
 
 /* ── Ranking ── */
 .rank-row {{
   display:flex; align-items:center; gap:8px;
-  padding:4px 0; border-bottom:1px solid {BORDER};
+  padding:6px 0; border-bottom:1px solid {BORDER};
 }}
-.rank-name {{ font-size:0.75rem; color:{WHITE} !important; flex:1; font-weight:500;
+.rank-name {{ font-size:0.80rem; color:{WHITE} !important; flex:1; font-weight:500;
               white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }}
 .rank-bg   {{ flex:2; height:5px; background:{CARD2}; border-radius:3px; overflow:hidden; }}
 .rank-fill {{ height:5px; border-radius:3px; }}
-.rank-val  {{ font-size:0.75rem; font-weight:700; min-width:32px; text-align:right; }}
+.rank-val  {{ font-size:0.80rem; font-weight:700; min-width:36px; text-align:right; }}
 
 /* ── Tabela atendentes ── */
-.att-table {{ width:100%; border-collapse:collapse; font-size:0.75rem; }}
+.att-table {{ width:100%; border-collapse:collapse; font-size:0.78rem; }}
 .att-table th {{
-  font-size:0.60rem; font-weight:700; text-transform:uppercase;
+  font-size:0.63rem; font-weight:700; text-transform:uppercase;
   letter-spacing:0.5px; color:{MUTED} !important;
-  padding:6px 8px; border-bottom:1px solid {BORDER}; text-align:left;
+  padding:7px 10px; border-bottom:1px solid {BORDER}; text-align:left;
 }}
-.att-table td {{ color:{WHITE} !important; padding:6px 8px; border-bottom:1px solid {BORDER}; }}
+.att-table td {{ color:{WHITE} !important; padding:8px 10px; border-bottom:1px solid {BORDER}; }}
 .att-table tr:hover td {{ background:{CARD2}; }}
 .barcell {{ display:flex; align-items:center; gap:6px; }}
 .bbar-bg {{ flex:1; height:5px; background:{CARD2}; border-radius:3px; overflow:hidden; }}
@@ -166,17 +363,30 @@ header[data-testid="stHeader"] {{ background:transparent !important; }}
 /* ── Pulse ── */
 @keyframes pulse {{
   0%   {{ box-shadow:0 0 0 0 rgba(0,206,201,.6); }}
-  70%  {{ box-shadow:0 0 0 6px rgba(0,206,201,0); }}
+  70%  {{ box-shadow:0 0 0 7px rgba(0,206,201,0); }}
   100% {{ box-shadow:0 0 0 0 rgba(0,206,201,0); }}
 }}
 .dot-live {{
-  display:inline-block; width:6px; height:6px;
+  display:inline-block; width:7px; height:7px;
   background:{GREEN}; border-radius:50%;
   animation:pulse 2s infinite; margin-right:5px; vertical-align:middle;
 }}
 
+/* ── Mobile: empilhar st.columns ── */
+@media(max-width:640px) {{
+  div[data-testid="stHorizontalBlock"] {{ flex-wrap:wrap !important; }}
+  div[data-testid="stHorizontalBlock"] > div[data-testid="stColumn"] {{
+    min-width:100% !important; flex:none !important;
+  }}
+  .block-container {{ padding:0.4rem 0.6rem 1.5rem !important; }}
+  .kpi-val {{ font-size:1.4rem !important; }}
+}}
+
 /* ── hr ── */
-hr {{ border-color:{BORDER} !important; margin:4px 0 8px !important; }}
+hr {{ border-color:{BORDER} !important; margin:8px 0 !important; }}
+::-webkit-scrollbar {{ width:4px; height:4px; }}
+::-webkit-scrollbar-thumb {{ background:{BORDER}; border-radius:3px; }}
+::-webkit-scrollbar-track {{ background:transparent; }}
 </style>
 """, unsafe_allow_html=True)
 
@@ -185,7 +395,7 @@ hr {{ border-color:{BORDER} !important; margin:4px 0 8px !important; }}
 def pb(h=300, **kw):
     return dict(
         paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
-        margin=dict(t=8, b=8, l=6, r=6), height=h,
+        margin=dict(t=12, b=8, l=6, r=6), height=h,
         font=dict(family="Inter,sans-serif", color=MUTED, size=11),
         **kw,
     )
@@ -219,9 +429,9 @@ def rank_html(df_r, cn, cv, color=TEAL):
     rows = ""
     for i, row in enumerate(df_r.itertuples(), 1):
         pct = int(getattr(row, cv) / top * 100)
-        pos = medals[i-1] if i <= 3 else f'<span style="font-size:.70rem;color:{MUTED};width:22px;text-align:center">{i}</span>'
+        pos = medals[i-1] if i <= 3 else f'<span style="font-size:.75rem;color:{MUTED};width:22px;text-align:center">{i}</span>'
         rows += f"""<div class="rank-row">
-  <span style="font-size:.90rem">{pos}</span>
+  <span style="font-size:.95rem">{pos}</span>
   <span class="rank-name">{getattr(row, cn)}</span>
   <div class="rank-bg"><div class="rank-fill" style="width:{pct}%;background:{color}"></div></div>
   <span class="rank-val" style="color:{color}">{getattr(row, cv):,}</span>
@@ -278,6 +488,45 @@ def carregar_dados() -> pd.DataFrame:
     df["TMR_h"] = (df["Data_Solucao"] - df["Data_abertura"]).dt.total_seconds() / 3600
     return df
 
+@st.cache_data(ttl=3600, show_spinner="Carregando contratos vigentes…")
+def carregar_contratos() -> pd.DataFrame:
+    cfg = st.secrets["database"]
+    srv = cfg["server"]
+    if "," in srv:
+        host, port = srv.split(",", 1)
+        port = int(port)
+    else:
+        host, port = srv, 1433
+    conn = pymssql.connect(
+        server=host, port=port,
+        database=cfg["database"],
+        user=cfg["username"],
+        password=cfg["password"],
+        login_timeout=30,
+    )
+    SQL_QUERY = """
+    SELECT 
+        ct.fk_cliente_fornecedor AS CLIENTE_codigo, 
+        cf.nome AS RAZAO, 
+        cf.cnpj AS CNPJ,
+        CASE ct.id_situacao 
+            WHEN 1 THEN 'VIGENTE' 
+            WHEN 2 THEN 'FINALIZADO' 
+            WHEN 3 THEN 'RESCINDIDO' 
+            WHEN 4 THEN 'SUSPENSO'
+        END AS SITUACAO,
+        fl.clifor_codigo AS cod_matrix
+    FROM sgc.dbo.contrato ct
+    JOIN sgc.dbo.cliente_fornecedor cf ON cf.codigo = ct.fk_cliente_fornecedor
+    JOIN sgc.dbo.cidade c ON c.codigo = cf.cid_codigo
+    JOIN sgc.dbo.tipo_contrato tc ON tc.codigo = ct.fk_tipo_contrato
+    LEFT JOIN sgc.dbo.filial fl ON fl.clifor_codigo_filial = cf.codigo
+    WHERE ct.id_situacao = 1
+    ORDER BY cf.nome
+    """
+    df = pd.read_sql(SQL_QUERY, conn)
+    conn.close()
+    return df
 
 # ══════════════════════════════════════════════════════════════════════════════
 #  ABA 0 — HOJE
@@ -291,11 +540,7 @@ def aba_hoje(df_raw, hoje):
     backlog = df_raw[df_raw["Data_Solucao"].isna()].shape[0]
     fcr_h  = safe_pct(df_h["Finalizado_Mesmo_Dia"].sum(), ab_h)
     
-    # >= 0 em vez de > 0
     tmr_h_v = df_sol_h[df_sol_h["TMR_h"] >= 0]["TMR_h"].mean()
-    
-    # Contagem de clientes diferentes atendidos hoje
-    clientes_hj = df_h["Cliente"].nunique()
 
     # KPIs do dia
     st.markdown(f"""
@@ -310,8 +555,6 @@ def aba_hoje(df_raw, hoje):
       {kpi("Backlog Total",     f"{backlog:,}",  "ainda sem solução",        "🗂️", ORANGE if backlog>50 else GREEN,
            tip_text="Fila de pendências: total de chamados abertos sem data de solução, independente do período.")}
       {kpi("Ativos Hoje",       str(df_h["Atendente"].nunique()), "atendentes com chamados", "👥", TEAL)}
-      {kpi("Clientes Hoje",     f"{clientes_hj}", "atendidos hoje",         "🏢", PURPLE,
-           tip_text="Quantidade de clientes distintos que abriram chamados na data de hoje.")}
     </div>
     """, unsafe_allow_html=True)
 
@@ -323,31 +566,26 @@ def aba_hoje(df_raw, hoje):
         </div>""", unsafe_allow_html=True)
         return
 
-    # Preparar base unificada de total por atendente
-    tot_ag = df_h.groupby("Atendente").size()
+    c1, c2, c3 = st.columns([2, 2, 1])
 
-    # Linha 1: Gráficos de Atendentes
-    r1c1, r1c2 = st.columns(2)
-
-    with r1c1:
+    with c1:
         try:
             st.markdown(co("📊 Atendimentos Hoje: Atendente × Canal"), unsafe_allow_html=True)
             df_at_or = df_h.groupby(["Atendente", "Origem"]).size().reset_index(name="Qtd")
             
-            df_at_or["Atendente_Lbl"] = df_at_or["Atendente"].apply(lambda x: f"{x} [{tot_ag[x]}]")
-            ordem_lbl = [f"{x} [{tot_ag[x]}]" for x in tot_ag.sort_values().index.tolist()]
+            ordem_at = df_at_or.groupby("Atendente")["Qtd"].sum().sort_values().index.tolist()
             
-            fig = px.bar(df_at_or, y="Atendente_Lbl", x="Qtd", color="Origem", orientation="h", text="Qtd",
-                         category_orders={"Atendente_Lbl": ordem_lbl},
+            fig = px.bar(df_at_or, y="Atendente", x="Qtd", color="Origem", orientation="h", text="Qtd",
+                         category_orders={"Atendente": ordem_at},
                          color_discrete_sequence=CORES, barmode="stack")
             
             fig.update_traces(textposition="inside", textfont=dict(size=11, color=WHITE), insidetextanchor="middle")
-            fig.update_layout(**pb(max(240, len(ordem_lbl)*35),
+            fig.update_layout(**pb(max(240, len(ordem_at)*35),
                 xaxis=dict(showgrid=False), yaxis=dict(showgrid=False),
                 yaxis_title="", xaxis_title="",
-                legend=dict(orientation="v", title="", font=dict(color=WHITE, size=10))
+                legend=dict(orientation="h", y=1.12, x=0, title="", font=dict(color=WHITE, size=10))
             ))
-            fig.update_layout(margin=dict(t=25, b=6, l=6, r=6)) 
+            fig.update_layout(margin=dict(t=35, b=8, l=6, r=6)) 
             
             st.plotly_chart(fig, use_container_width=True)
             st.markdown(cc(), unsafe_allow_html=True)
@@ -355,58 +593,16 @@ def aba_hoje(df_raw, hoje):
             st.markdown(cc(), unsafe_allow_html=True)
             st.warning(f"Gráfico indisponível: {e}")
 
-    with r1c2:
+    with c2:
         try:
-            st.markdown(co("🧩 Mapa de Calor Hoje: Atendente × Módulo"), unsafe_allow_html=True)
-            top_mod_h = df_h["Modulo"].value_counts().nlargest(5).index
-            df_hm = df_h.copy()
-            df_hm["Mod_x"] = df_hm["Modulo"].apply(lambda x: x if x in top_mod_h else "Outros")
-            
-            df_hm["Atendente_Lbl"] = df_hm["Atendente"].apply(lambda x: f"{x} [{tot_ag[x]}]")
-            
-            piv_h = df_hm.groupby(["Atendente_Lbl", "Mod_x"]).size().reset_index(name="Qtd")\
-                      .pivot(index="Atendente_Lbl", columns="Mod_x", values="Qtd").fillna(0)
-            
-            piv_h = piv_h.reindex(ordem_lbl).fillna(0)
-            
-            fig_mod = px.imshow(piv_h, text_auto=True, aspect="auto",
-                                color_continuous_scale=[[0,CARD2],[0.5,CARD],[1,PURPLE]])
-            fig_mod.update_coloraxes(showscale=False)
-            fig_mod.update_traces(textfont=dict(color=WHITE))
-            fig_mod.update_layout(**pb(max(240, len(ordem_lbl)*35),
-                xaxis_title="", yaxis_title="",
-                xaxis=dict(side="top") 
-            ))
-            fig_mod.update_layout(margin=dict(t=25, b=6, l=6, r=6))
-            
-            st.plotly_chart(fig_mod, use_container_width=True)
-            st.markdown(cc(), unsafe_allow_html=True)
-        except Exception as e:
-            st.markdown(cc(), unsafe_allow_html=True)
-            st.warning(f"Gráfico indisponível: {e}")
-
-    # Linha 2: Top Clientes, Motivos, Origem e Situação
-    r2c1, r2c2, r2c3 = st.columns([1.5, 1.5, 1])
-
-    with r2c1:
-        st.markdown(co("🏆 Top 10 Clientes — Hoje"), unsafe_allow_html=True)
-        dr_h = df_h.groupby("Cliente").size().reset_index(name="Total").sort_values("Total", ascending=False).head(10)
-        if not dr_h.empty:
-            st.markdown(rank_html(dr_h, "Cliente", "Total", TEAL), unsafe_allow_html=True)
-        else:
-            st.markdown("<div style='padding:20px;color:#8BA3BF'>Nenhum cliente ainda.</div>", unsafe_allow_html=True)
-        st.markdown(cc(), unsafe_allow_html=True)
-
-    with r2c2:
-        try:
-            st.markdown(co("🎯 Principais Motivos — Hoje"), unsafe_allow_html=True)
+            st.markdown(co("🎯 Motivos — Hoje"), unsafe_allow_html=True)
             df_mot_h = df_h.groupby("Motivo").size().reset_index(name="Qtd").nlargest(8,"Qtd").sort_values("Qtd")
             fig2 = px.bar(df_mot_h, y="Motivo", x="Qtd", orientation="h", text="Qtd",
                            color="Qtd", color_continuous_scale=[[0,CARD2],[1,BRAND]])
             fig2.update_coloraxes(showscale=False)
             fig2.update_traces(textposition="outside", cliponaxis=False,
                                 textfont=dict(color=WHITE))
-            fig2.update_layout(**pb(max(180, len(df_mot_h)*28),
+            fig2.update_layout(**pb(max(200, len(df_mot_h)*32),
                 xaxis=dict(showgrid=False), yaxis=dict(showgrid=False),
                 yaxis_title="", xaxis_title=""))
             st.plotly_chart(fig2, use_container_width=True)
@@ -415,7 +611,7 @@ def aba_hoje(df_raw, hoje):
             st.markdown(cc(), unsafe_allow_html=True)
             st.warning(f"Gráfico indisponível: {e}")
 
-    with r2c3:
+    with c3:
         try:
             st.markdown(co("📡 Origem — Hoje"), unsafe_allow_html=True)
             df_or_h = df_h.groupby("Origem").size().reset_index(name="Qtd")
@@ -423,13 +619,15 @@ def aba_hoje(df_raw, hoje):
                            color_discrete_sequence=CORES)
             fig3.update_traces(textposition="inside", textinfo="percent+label",
                                 textfont=dict(size=10, color=WHITE))
-            fig3.update_layout(**pb(180, showlegend=False))
+            fig3.update_layout(**pb(220, showlegend=False))
             st.plotly_chart(fig3, use_container_width=True)
             st.markdown(cc(), unsafe_allow_html=True)
         except Exception as e:
             st.markdown(cc(), unsafe_allow_html=True)
             st.warning(f"Gráfico indisponível: {e}")
 
+    c4, c5 = st.columns(2)
+    with c4:
         try:
             st.markdown(co("🔵 Situação — Hoje"), unsafe_allow_html=True)
             df_sit_h = df_h.groupby("Situacao").size().reset_index(name="Qtd")
@@ -437,121 +635,38 @@ def aba_hoje(df_raw, hoje):
                            color_discrete_sequence=CORES)
             fig4.update_traces(textposition="outside", textinfo="label+percent",
                                 textfont=dict(size=10, color=WHITE))
-            fig4.update_layout(**pb(180, showlegend=False))
+            fig4.update_layout(**pb(240, showlegend=False))
             st.plotly_chart(fig4, use_container_width=True)
             st.markdown(cc(), unsafe_allow_html=True)
         except Exception as e:
             st.markdown(cc(), unsafe_allow_html=True)
             st.warning(f"Gráfico indisponível: {e}")
 
-    # ===== AUDITORIA DE DADOS =====
-    st.markdown("<br>", unsafe_allow_html=True)
-    with st.expander("🔍 Auditoria e Depuração (Comparar com Excel)", expanded=False):
-        st.markdown("**1. Query SQL Executada no Banco:**")
-        st.code("""
-SELECT
-    Sac, 
-    CONVERT(VARCHAR(10), Data_abertura, 103) + ' ' + CONVERT(VARCHAR(8), Data_abertura, 108) AS Data_abertura,
-    Dia_abertura, Mes_abertura, Ano_abertura,
-    CONVERT(VARCHAR(10), [Data Solucao], 103) + ' ' + CONVERT(VARCHAR(8), [Data Solucao], 108) AS Data_Solucao,
-    [Cliente Codigo] AS Cliente_Codigo, Cliente, Contato,
-    Assunto, Motivo, Motivocodigo, Modulo, Situacao, Atendente, Origem,
-    Finalizado_Mesmo_Dia, Tipo
-FROM sgrp_atendimentos_geral
-WHERE Ano_abertura >= 2020;
-        """, language="sql")
-        
-        st.markdown("**2. Dados Brutos (Somente chamados ABERTOS hoje):**")
-        st.dataframe(df_h.reset_index(drop=True), width="stretch")
-
-
-# ══════════════════════════════════════════════════════════════════════════════
-#  NOVA ABA — POR HORA
-# ══════════════════════════════════════════════════════════════════════════════
-def aba_por_hora(df_base, hoje):
-    st.markdown('<span class="sec-t">📅 Filtro de Data (Exclusivo para esta análise)</span>', unsafe_allow_html=True)
-    
-    c_filt, _ = st.columns([2, 8])
-    with c_filt:
-        data_filtro = st.date_input("Escolha o dia para analisar o fluxo", value=hoje, format="DD/MM/YYYY", key="filtro_hora")
-    
-    df_dia = df_base[df_base["Data_abertura"].dt.date == data_filtro].copy()
-    
-    if df_dia.empty:
-        st.markdown(f"""
-        <div style="text-align:center;padding:40px;color:{MUTED}">
-          <div style="font-size:2rem">📭</div>
-          <div style="font-size:1rem;margin-top:8px">Nenhum chamado aberto em {data_filtro.strftime('%d/%m/%Y')} com os filtros selecionados.</div>
-        </div>""", unsafe_allow_html=True)
-        return
-
-    df_dia["Hora_Int"] = df_dia["Data_abertura"].dt.hour
-    df_dia["Hora"] = df_dia["Hora_Int"].apply(lambda x: f"{x:02d}:00")
-    
-    df_hora = df_dia.groupby("Hora").size().reset_index(name="Qtd")
-    pico_hora = df_hora.iloc[df_hora['Qtd'].idxmax()]['Hora'] if not df_hora.empty else "N/A"
-    pico_qtd = df_hora['Qtd'].max() if not df_hora.empty else 0
-    
-    horas_ativas = df_dia["Hora"].nunique()
-    media_hora = len(df_dia) / horas_ativas if horas_ativas > 0 else 0
-    
-    st.markdown(f"""<div style="display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:12px">
-      {kpi("Total no Dia", f"{len(df_dia):,}", "com os filtros aplicados", "📋", TEAL)}
-      {kpi("Atendentes", f"{df_dia['Atendente'].nunique()}", "com chamados registrados", "👥", BRAND)}
-      {kpi("Clientes", f"{df_dia['Cliente'].nunique()}", "atendidos na data", "🏢", PURPLE)}
-      {kpi("Média por Hora", f"{media_hora:.1f}", "chamados por hora ativa", "⏱️", GREEN)}
-      {kpi("Pico de Volume", f"{pico_hora}", f"com {pico_qtd} chamados neste horário", "🔥", ORANGE)}
-    </div>""", unsafe_allow_html=True)
-
-    c1, c2 = st.columns(2)
-    with c1:
+    with c5:
         try:
-            st.markdown(co(f"📊 Fluxo de Chamados por Hora × Atendente"), unsafe_allow_html=True)
-            dh_at = df_dia.groupby(["Hora", "Atendente"]).size().reset_index(name="Qtd")
-            fig1 = px.bar(dh_at, x="Hora", y="Qtd", color="Atendente", text="Qtd",
-                          color_discrete_sequence=CORES)
-            fig1.update_traces(textposition="inside", textfont=dict(size=10, color=WHITE))
-            fig1.update_layout(**pb(320, xaxis_title="", yaxis_title="Volume de Chamados",
-                                legend=dict(orientation="v", title="", font=dict(color=WHITE, size=9))))
-            st.plotly_chart(fig1, use_container_width=True)
+            st.markdown(co("🧩 Módulos — Hoje"), unsafe_allow_html=True)
+            df_mod_h = df_h.groupby("Modulo").size().reset_index(name="Qtd").nlargest(8,"Qtd").sort_values("Qtd")
+            fig5 = px.bar(df_mod_h, y="Modulo", x="Qtd", orientation="h", text="Qtd",
+                           color="Qtd", color_continuous_scale=[[0,CARD2],[1,PURPLE]])
+            fig5.update_coloraxes(showscale=False)
+            fig5.update_traces(textposition="outside", cliponaxis=False,
+                                textfont=dict(color=WHITE))
+            fig5.update_layout(**pb(max(200, len(df_mod_h)*32),
+                xaxis=dict(showgrid=False), yaxis=dict(showgrid=False),
+                yaxis_title="", xaxis_title=""))
+            st.plotly_chart(fig5, use_container_width=True)
             st.markdown(cc(), unsafe_allow_html=True)
         except Exception as e:
             st.markdown(cc(), unsafe_allow_html=True)
-            
-    with c2:
-        try:
-            st.markdown(co("🧩 Fluxo de Chamados por Hora × Módulo (Top 5)"), unsafe_allow_html=True)
-            top5m = df_dia["Modulo"].value_counts().nlargest(5).index
-            df_hm = df_dia.copy()
-            df_hm["Mod_x"] = df_hm["Modulo"].apply(lambda x: x if x in top5m else "Outros")
-            dh_mod = df_hm.groupby(["Hora", "Mod_x"]).size().reset_index(name="Qtd")
-            fig2 = px.bar(dh_mod, x="Hora", y="Qtd", color="Mod_x", text="Qtd",
-                          color_discrete_sequence=CORES)
-            fig2.update_traces(textposition="inside", textfont=dict(size=10, color=WHITE))
-            fig2.update_layout(**pb(320, xaxis_title="", yaxis_title="Volume de Chamados",
-                                legend=dict(orientation="v", title="", font=dict(color=WHITE, size=9))))
-            st.plotly_chart(fig2, use_container_width=True)
-            st.markdown(cc(), unsafe_allow_html=True)
-        except Exception as e:
-            st.markdown(cc(), unsafe_allow_html=True)
+            st.warning(f"Gráfico indisponível: {e}")
 
-    st.markdown('<span class="sec-t">📋 Detalhamento Cronológico dos Chamados</span>', unsafe_allow_html=True)
-    
-    col_f, _ = st.columns([3, 7])
-    with col_f:
-        busca = st.text_input("🔍 Filtrar na tabela abaixo:", placeholder="Busque por SAC, Cliente, Assunto...", key="busca_hora")
-    
-    cols_disp = ["Hora", "Sac", "Atendente", "Cliente", "Modulo", "Situacao", "Origem", "Assunto"]
-    valid_cols = [c for c in cols_disp if c in df_dia.columns]
-    
-    df_show = df_dia.sort_values(["Hora_Int", "Sac"])[valid_cols].reset_index(drop=True)
-    
-    if busca:
-        busca_lower = busca.lower()
-        mask = df_show.astype(str).apply(lambda x: x.str.lower().str.contains(busca_lower)).any(axis=1)
-        df_show = df_show[mask]
-        
-    st.dataframe(df_show, width="stretch", height=300)
+    st.markdown('<span class="sec-t">📋 Lista de Chamados Abertos Hoje</span>', unsafe_allow_html=True)
+    cols_show = ["Sac","Cliente","Contato","Atendente","Modulo","Situacao","Origem","Assunto"]
+    cols_disp = [c for c in cols_show if c in df_h.columns]
+    st.dataframe(
+        df_h[cols_disp].reset_index(drop=True),
+        use_container_width=True, height=260,
+    )
 
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -720,7 +835,6 @@ def aba_clientes(df):
         tot = len(dce); ab = dce["Data_Solucao"].isna().sum()
         fcr = safe_pct(dce["Finalizado_Mesmo_Dia"].sum(), tot)
         
-        # >= 0 em vez de > 0
         tmr = dce[dce["TMR_h"]>=0]["TMR_h"].mean()
         
         st.markdown(f"""
@@ -772,10 +886,7 @@ def aba_atendentes(df):
         Resolvidos=("Data_Solucao", lambda x: x.notna().sum()),
         Em_Aberto=("Data_Solucao", lambda x: x.isna().sum()),
         FCR_raw=("Finalizado_Mesmo_Dia","sum"),
-        
-        # >= 0 em vez de > 0
         TMR_raw=("TMR_h", lambda x: x[x>=0].mean() if (x>=0).any() else float("nan")),
-        
     ).reset_index()
     df_at["FCR_pct"] = df_at.apply(lambda r: safe_pct(r["FCR_raw"], r["Total"]), axis=1)
     df_at["Enc_pct"] = df_at.apply(lambda r: safe_pct(r["Resolvidos"], r["Total"]), axis=1)
@@ -930,7 +1041,7 @@ def aba_atendentes(df):
 # ══════════════════════════════════════════════════════════════════════════════
 #  ABA 4 — SITUAÇÃO DOS CHAMADOS
 # ══════════════════════════════════════════════════════════════════════════════
-def aba_situacao(df, df_raw):
+def aba_situacao(df):
     c1, c2, c3 = st.columns([1,1,2])
 
     with c1:
@@ -1041,31 +1152,6 @@ def aba_situacao(df, df_raw):
     except Exception as e:
         st.warning(f"Seção de backlog indisponível: {e}")
 
-    # ================= NOVO: SEÇÃO DE FEEDBACKS =================
-    st.markdown('<span class="sec-t">⭐ Feedbacks Acumulados por Atendente (Ignora Filtros)</span>', unsafe_allow_html=True)
-    try:
-        # Busca exclusiva no campo Situação do banco completo (df_raw)
-        mask_fb = df_raw["Situacao"].astype(str).str.contains("feedback", case=False, na=False)
-        df_fb = df_raw[mask_fb]
-        
-        if not df_fb.empty:
-            st.markdown(co("🏆 Total Histórico de Feedbacks (Base Completa)"), unsafe_allow_html=True)
-            df_fb_ag = df_fb.groupby("Atendente").size().reset_index(name="Qtd").sort_values("Qtd", ascending=True)
-            
-            fig_fb = px.bar(df_fb_ag, x="Qtd", y="Atendente", orientation="h", text="Qtd",
-                           color="Qtd", color_continuous_scale=[[0, CARD2], [1, GOLD]])
-            fig_fb.update_coloraxes(showscale=False)
-            fig_fb.update_traces(textposition="outside", cliponaxis=False, textfont=dict(color=WHITE))
-            fig_fb.update_layout(**pb(max(250, len(df_fb_ag)*32),
-                xaxis=dict(showgrid=False), yaxis=dict(showgrid=False),
-                xaxis_title="", yaxis_title=""))
-            st.plotly_chart(fig_fb, use_container_width=True)
-            st.markdown(cc(), unsafe_allow_html=True)
-        else:
-            st.info("Nenhum registro com a Situação 'Feedback' foi encontrado no banco de dados.")
-    except Exception as e:
-        st.warning(f"Erro ao gerar gráfico de Feedbacks: {e}")
-
 
 # ══════════════════════════════════════════════════════════════════════════════
 #  ABA 5 — SLA & KPIs
@@ -1128,7 +1214,6 @@ def aba_sla(df):
         try:
             st.markdown(co(f"⏱️ {tip('TMR','Tempo Médio de Resolução')} por Atendente (dias)"), unsafe_allow_html=True)
             
-            # >= 0 em vez de > 0
             dtmr = df[df["TMR_h"]>=0].groupby("Atendente")["TMR_h"].mean().reset_index()
             
             dtmr.columns = ["Atendente","TMR_h"]
@@ -1294,7 +1379,7 @@ def aba_alertas(df, df_raw):
                     sac     = str(r.get("Sac","—"))
                     st.markdown(f"""<div class="alert-card">
   <div class="alert-title">🔴 #{sac} — {cliente}
-    <span style="float:right;color:{DANGER};font-weight:700;font-size:.75rem">{dias} dias</span>
+    <span style="float:right;color:{DANGER};font-weight:700;font-size:.78rem">{dias} dias</span>
   </div>
   <div class="alert-sub">👤 {atend} &nbsp;·&nbsp; 🧩 {modulo} &nbsp;·&nbsp; 📋 {assunto}</div>
 </div>""", unsafe_allow_html=True)
@@ -1306,7 +1391,7 @@ def aba_alertas(df, df_raw):
                 dias = int(r["Dias"])
                 st.markdown(f"""<div class="alert-card alert-warn">
   <div class="alert-title">🟠 #{r.get('Sac','—')} — {r.get('Cliente','—')}
-    <span style="float:right;color:{GOLD};font-weight:700;font-size:.75rem">{dias} dias</span>
+    <span style="float:right;color:{GOLD};font-weight:700;font-size:.78rem">{dias} dias</span>
   </div>
   <div class="alert-sub">👤 {r.get('Atendente','—')} &nbsp;·&nbsp; 🧩 {r.get('Modulo','—')} &nbsp;·&nbsp; 📋 {str(r.get('Assunto','—'))[:55]}</div>
 </div>""", unsafe_allow_html=True)
@@ -1371,6 +1456,65 @@ def aba_alertas(df, df_raw):
 
 
 # ══════════════════════════════════════════════════════════════════════════════
+#  ABA 7 — CLIENTES INATIVOS
+# ══════════════════════════════════════════════════════════════════════════════
+def aba_inativos(df_raw, df_contratos):
+    st.markdown('<span class="sec-t">📡 Radar de Inatividade (Customer Success)</span>', unsafe_allow_html=True)
+    
+    # 1. Tratamento de IDs e criação da chave do Grupo (Matriz)
+    df_c = df_contratos.copy()
+    df_c['CLIENTE_codigo'] = df_c['CLIENTE_codigo'].astype(str).str.replace(r'\.0$', '', regex=True)
+    df_c['cod_matrix'] = df_c['cod_matrix'].astype(str).str.replace(r'\.0$', '', regex=True).replace('nan', None)
+    
+    # Se tem cod_matrix, ele é o grupo. Se não, o próprio cliente é o grupo.
+    df_c['ID_Grupo'] = df_c['cod_matrix'].combine_first(df_c['CLIENTE_codigo'])
+    
+    # 2. Mapear tickets para o Grupo
+    map_grupo = df_c.set_index('CLIENTE_codigo')['ID_Grupo'].to_dict()
+    df_t = df_raw.copy()
+    df_t['Cliente_Codigo'] = df_t['Cliente_Codigo'].astype(str).str.replace(r'\.0$', '', regex=True)
+    df_t['ID_Grupo'] = df_t['Cliente_Codigo'].map(map_grupo).fillna(df_t['Cliente_Codigo'])
+    
+    # 3. Último contato geral do grupo
+    ultimos = df_t.groupby('ID_Grupo')['Data_abertura'].max().reset_index()
+    ultimos.rename(columns={'Data_abertura': 'Ultimo_Contato'}, inplace=True)
+    
+    # 4. Juntar as bases e calcular inatividade
+    df_view = df_c.merge(ultimos, on='ID_Grupo', how='left')
+    hoje = pd.Timestamp(date.today())
+    df_view['Dias_Inativo'] = (hoje - df_view['Ultimo_Contato']).dt.days
+    
+    # Filtro Interativo na tela
+    dias_filtro = st.slider("⚠️ Mostrar clientes vigentes sem contato há mais de (dias):", 
+                            min_value=0, max_value=365, value=60, step=15)
+    
+    # Filtrar apenas o recorte selecionado
+    df_view = df_view[df_view['Dias_Inativo'] >= dias_filtro].sort_values('Dias_Inativo', ascending=False)
+    
+    # 5. Formatar Data Padrão BR e exibir
+    df_view['Último Contato'] = df_view['Ultimo_Contato'].dt.strftime('%d/%m/%Y').fillna('Sem registro histórico')
+    df_view['Dias Inativo'] = df_view['Dias_Inativo'].fillna(9999).astype(int).astype(str).replace('9999', '∞')
+    
+    # KPIs da aba
+    total_vigentes = len(df_c)
+    total_inativos = len(df_view)
+    taxa = (total_inativos / total_vigentes * 100) if total_vigentes > 0 else 0
+    
+    st.markdown(f"""
+    <div class="kpi-grid" style="grid-template-columns:repeat(3,1fr)">
+      {kpi("Base Vigente", f"{total_vigentes:,}", "contratos ativos", "🏢", TEAL)}
+      {kpi("Inativos", f"{total_inativos:,}", f"há +{dias_filtro} dias", "⚠️", ORANGE if taxa < 30 else DANGER)}
+      {kpi("Taxa de Risco", f"{taxa:.1f}%", "da base sem contato", "📉", DANGER if taxa > 30 else GREEN)}
+    </div>
+    """, unsafe_allow_html=True)
+    
+    st.markdown(co(f"📋 Contratos Vigentes — Sem contato há mais de {dias_filtro} dias"), unsafe_allow_html=True)
+    cols = ['CLIENTE_codigo', 'RAZAO', 'CNPJ', 'SITUACAO', 'Último Contato', 'Dias Inativo']
+    st.dataframe(df_view[cols].reset_index(drop=True), use_container_width=True, height=500)
+    st.markdown(cc(), unsafe_allow_html=True)
+
+
+# ══════════════════════════════════════════════════════════════════════════════
 #  MAIN
 # ══════════════════════════════════════════════════════════════════════════════
 def main():
@@ -1398,17 +1542,19 @@ def main():
 
     try:
         df_raw = carregar_dados()
+        df_contratos = carregar_contratos()
     except Exception as e:
         st.error(f"❌ Erro ao conectar: `{e}`")
         st.stop()
+        
     if df_raw.empty:
-        st.warning("⚠️ Nenhum registro retornado.")
+        st.warning("⚠️ Nenhum registro de chamados retornado.")
         st.stop()
 
     with st.container():
         st.markdown(f"""<div class="filter-bar-title">
   <span style="display:inline-block;width:6px;height:6px;background:{TEAL};border-radius:50%"></span>
-  FILTROS GLOBAIS — aplicados em todas as abas (Data é ignorada na aba "Hoje" e reconfigurada em "Por Hora")
+  FILTROS GLOBAIS — aplicados em todas as abas (exceto "Hoje" e "Radar Inativos")
 </div>""", unsafe_allow_html=True)
 
         fc1, fc2, fc3, fc4, fc5, fc6, fc7 = st.columns([1.2, 1.2, 1.8, 1.8, 1.8, 1.8, 0.8])
@@ -1434,7 +1580,6 @@ def main():
             origens = sorted(df_raw["Origem"].dropna().astype(str).unique())
             sel_or = st.multiselect("Origem / Canal", origens,
                                      placeholder="Todas as origens")
-        
         with fc6:
             modulos = sorted(df_raw["Modulo"].dropna().astype(str).unique())
             sel_mod = st.multiselect("Módulo", modulos,
@@ -1446,51 +1591,30 @@ def main():
                 st.cache_data.clear()
                 st.rerun()
 
-    # Criação de um DF base que aplica todos os filtros EXCETO a data global.
-    # Isso permite que a aba "Por Hora" obedeça as seleções acima, mas use sua própria data.
-    df_base_no_date = df_raw.copy()
-    if sel_at:  df_base_no_date = df_base_no_date[df_base_no_date["Atendente"].isin(sel_at)]
-    if sel_sit: df_base_no_date = df_base_no_date[df_base_no_date["Situacao"].isin(sel_sit)]
-    if sel_or:  df_base_no_date = df_base_no_date[df_base_no_date["Origem"].isin(sel_or)]
-    if sel_mod: df_base_no_date = df_base_no_date[df_base_no_date["Modulo"].isin(sel_mod)]
-
-    # Aplicação final do filtro de data para as demais abas de relatórios gerais
-    df = df_base_no_date.copy()
+    df = df_raw.copy()
     if di <= df_:
         df = df[(df["Data_abertura"].dt.date >= di) & (df["Data_abertura"].dt.date <= df_)]
+    if sel_at:  df = df[df["Atendente"].isin(sel_at)]
+    if sel_sit: df = df[df["Situacao"].isin(sel_sit)]
+    if sel_or:  df = df[df["Origem"].isin(sel_or)]
+    if sel_mod: df = df[df["Modulo"].isin(sel_mod)]
 
-    st.markdown(f"""<div style="font-size:0.68rem;color:{MUTED};margin:2px 0 10px">
+    st.markdown(f"""<div style="font-size:0.68rem;color:{MUTED};margin:6px 0 14px">
   📋 <b style="color:{WHITE}">{len(df):,}</b> chamados no período
   &nbsp;·&nbsp; de <b style="color:{WHITE}">{di.strftime('%d/%m/%Y')}</b>
   até <b style="color:{WHITE}">{df_.strftime('%d/%m/%Y')}</b>
 </div>""", unsafe_allow_html=True)
 
-    # ── Lógica de MTD (Month-to-Date) por Dias Úteis ──
-    start_curr = hoje.replace(day=1)
-    bdays_curr = pd.bdate_range(start=start_curr, end=hoje).date
-    qtd_dias_uteis = len(bdays_curr)
-
-    mes_ant = 12 if hoje.month == 1 else hoje.month - 1
-    ano_ant = hoje.year - 1 if hoje.month == 1 else hoje.year
-    start_prev = date(ano_ant, mes_ant, 1)
-
-    ult_dia_prev = calendar.monthrange(ano_ant, mes_ant)[1]
-    end_prev = date(ano_ant, mes_ant, ult_dia_prev)
-
-    bdays_prev = pd.bdate_range(start=start_prev, end=end_prev).date
-    limite_idx = min(qtd_dias_uteis, len(bdays_prev)) - 1
-    cutoff_prev = bdays_prev[limite_idx]
-
-    df_mes = df_raw[(df_raw["Data_abertura"].dt.date >= start_curr) & (df_raw["Data_abertura"].dt.date <= hoje)]
-    
-    df_mant_parcial = df_raw[
-        (df_raw["Data_abertura"].dt.date >= start_prev) &
-        (df_raw["Data_abertura"].dt.date <= cutoff_prev)
+    mes_a, ano_a = hoje.month, hoje.year
+    df_mes  = df_raw[(df_raw["Mes_abertura"]==mes_a) & (df_raw["Ano_abertura"]==ano_a)]
+    df_mant = df_raw[
+        (df_raw["Mes_abertura"]==(mes_a-1 or 12)) &
+        (df_raw["Ano_abertura"]==(ano_a if mes_a>1 else ano_a-1))
     ]
 
     backlog = df_raw[df_raw["Data_Solucao"].isna()].shape[0]
     tot_mes = len(df_mes)
-    tot_ant = len(df_mant_parcial) 
+    tot_ant = len(df_mant)
     fcr_mes = safe_pct(df_mes["Finalizado_Mesmo_Dia"].sum(), tot_mes)
     
     tmr_raw = df_raw[df_raw["TMR_h"]>=0]["TMR_h"].mean()
@@ -1500,7 +1624,7 @@ def main():
 
     delta_m = tot_mes - tot_ant
     d_cls   = "b-red" if delta_m>0 else "b-green"
-    d_str   = f"{'↑' if delta_m>0 else '↓'} {abs(delta_m)} vs {qtd_dias_uteis} dias úteis ant."
+    d_str   = f"{'↑' if delta_m>0 else '↓'} {abs(delta_m)} vs mês ant."
     f_cls   = "b-green" if fcr_mes>=70 else ("b-gold" if fcr_mes>=50 else "b-red")
 
     st.markdown(f"""<div class="kpi-grid">
@@ -1517,23 +1641,23 @@ def main():
 
     tabs = st.tabs([
         "🕐 Hoje",
-        "⏱️ Por Hora",
         "📊 Resumo Geral",
         "🏢 Clientes",
         "👥 Atendentes",
         "🎫 Situação",
         "📈 SLA & KPIs",
         "🚨 Alertas & Gestão",
+        "📡 Radar Inativos",
     ])
 
     with tabs[0]: aba_hoje(df_raw, hoje)
-    with tabs[1]: aba_por_hora(df_base_no_date, hoje)
-    with tabs[2]: aba_resumo(df)
-    with tabs[3]: aba_clientes(df)
-    with tabs[4]: aba_atendentes(df)
-    with tabs[5]: aba_situacao(df, df_raw)
-    with tabs[6]: aba_sla(df)
-    with tabs[7]: aba_alertas(df, df_raw)
+    with tabs[1]: aba_resumo(df)
+    with tabs[2]: aba_clientes(df)
+    with tabs[3]: aba_atendentes(df)
+    with tabs[4]: aba_situacao(df)
+    with tabs[5]: aba_sla(df)
+    with tabs[6]: aba_alertas(df, df_raw)
+    with tabs[7]: aba_inativos(df_raw, df_contratos)
 
 
 if __name__ == "__main__":
