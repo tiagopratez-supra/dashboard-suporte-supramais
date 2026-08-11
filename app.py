@@ -1081,7 +1081,47 @@ def aba_situacao(df, df_raw):
     except Exception as e:
         st.warning(f"Seção de backlog indisponível: {e}")
 
-    # ================= NOVO: SEÇÃO DE FEEDBACKS =================
+    # ================= NOVO: SEÇÃO DE CADASTRADAS E EM ANÁLISE =================
+    st.markdown('<span class="sec-t">📥 Fila Inicial: Cadastradas & Em Análise (Ignora Filtros)</span>', unsafe_allow_html=True)
+    try:
+        # Usa df_raw para ignorar a data e regex para pegar variações (analise/análise/cadastrado/cadastrada)
+        mask_fila = df_raw["Situacao"].astype(str).str.contains(r'cadastrad|an[aá]lise', case=False, na=False)
+        df_fila = df_raw[mask_fila].copy()
+        
+        if not df_fila.empty:
+            qtd_cad = len(df_fila[df_fila["Situacao"].astype(str).str.contains("cadastrad", case=False, na=False)])
+            qtd_ana = len(df_fila[df_fila["Situacao"].astype(str).str.contains("an[aá]lise", case=False, na=False)])
+            
+            st.markdown(f"""<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:12px">
+              {kpi("Total na Fila", f"{len(df_fila)}", "aguardando tratativa", "📥", BRAND)}
+              {kpi("Cadastradas", f"{qtd_cad}", "status inicial", "🆕", ORANGE)}
+              {kpi("Em Análise", f"{qtd_ana}", "em verificação", "🔍", GOLD)}
+            </div>""", unsafe_allow_html=True)
+            
+            cf1, cf2 = st.columns([2, 3])
+            with cf1:
+                st.markdown(co("Volume por Atendente / Fila"), unsafe_allow_html=True)
+                df_fila_ag = df_fila.groupby("Atendente").size().reset_index(name="Qtd").sort_values("Qtd", ascending=True)
+                fig_f = px.bar(df_fila_ag, x="Qtd", y="Atendente", orientation="h", text="Qtd",
+                               color="Qtd", color_continuous_scale=[[0, CARD2], [1, BRAND]])
+                fig_f.update_coloraxes(showscale=False)
+                fig_f.update_traces(textposition="outside", cliponaxis=False, textfont=dict(color=WHITE))
+                fig_f.update_layout(**pb(max(200, len(df_fila_ag)*32), xaxis=dict(showgrid=False), yaxis=dict(showgrid=False), xaxis_title="", yaxis_title=""))
+                st.plotly_chart(fig_f, use_container_width=True)
+                st.markdown(cc(), unsafe_allow_html=True)
+                
+            with cf2:
+                st.markdown(co("📋 Relação de Chamados (Mais Antigos Primeiro)"), unsafe_allow_html=True)
+                df_fila_show = df_fila.sort_values("Data_abertura")[["Sac", "Data_abertura", "Situacao", "Cliente", "Atendente"]]
+                df_fila_show["Data_abertura"] = df_fila_show["Data_abertura"].dt.strftime('%d/%m/%Y %H:%M')
+                st.dataframe(df_fila_show.reset_index(drop=True), use_container_width=True, height=max(200, len(df_fila_ag)*32))
+                st.markdown(cc(), unsafe_allow_html=True)
+        else:
+            st.info("Nenhum chamado com status 'Cadastrada' ou 'Em análise' encontrado.")
+    except Exception as e:
+        st.warning(f"Erro ao gerar seção de fila inicial: {e}")
+
+    # ================= SEÇÃO DE FEEDBACKS =================
     st.markdown('<span class="sec-t">⭐ Feedbacks Acumulados por Atendente (Ignora Filtros)</span>', unsafe_allow_html=True)
     try:
         # Busca exclusiva no campo Situação do banco completo (df_raw)
