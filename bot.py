@@ -23,6 +23,10 @@ estado_usuarios = {}
 ultima_interacao = {}
 TEMPO_LIMITE_INATIVIDADE = 300 # 5 minutos
 
+# ----------------- CONTROLE DE ALERTAS DIÁRIOS -----------------
+chamados_notificados_hoje = set()
+data_notificacao_atual = (datetime.utcnow() - timedelta(hours=3)).date()
+
 # ----------------- MONITORAMENTO PROATIVO DE INATIVIDADE -----------------
 def monitorar_inatividade():
     """Roda em segundo plano checando a cada 30 segundos se alguém excedeu os 5 minutos de inatividade"""
@@ -51,6 +55,45 @@ def get_db_connection():
     cfg = st.secrets["database"]
     conn_str = f"DRIVER={{ODBC Driver 17 for SQL Server}};SERVER={cfg['server']};DATABASE={cfg['database']};UID={cfg['username']};PWD={cfg['password']};"
     return pyodbc.connect(conn_str)
+
+def buscar_erros_hoje():
+    """Busca os chamados abertos hoje com os motivos críticos e que ainda não foram concluídos"""
+    try:
+        hoje_brasil = (datetime.utcnow() - timedelta(hours=3)).strftime('%d/%m/%Y')
+        
+        # Conversão 103 utilizada para garantir a formatação da data no padrão Brasil e exclusão dos finalizados
+        sql_query = f"""
+        SELECT Sac, Cliente, Atendente, Motivo, Assunto, Situacao,
+               CONVERT(VARCHAR(10), Data_abertura, 103) AS Data_abertura_br
+        FROM sgrp_atendimentos_status
+        WHERE CONVERT(VARCHAR(10), Data_abertura, 103) = '{hoje_brasil}'
+          AND (
+               LOWER(Motivo) LIKE '%erro%' 
+            OR LOWER(Motivo) LIKE '%erro de versão%'
+            OR LOWER(Motivo) LIKE '%erro de versao%'
+            OR LOWER(Motivo) LIKE '%correçao%'
+            OR LOWER(Motivo) LIKE '%correção%'
+          )
+          AND LOWER(RTRIM(LTRIM(Situacao))) NOT IN ('solucionada', 'fechado', 'encerrado', 'cancelado', 'resolvido', 'concluído', 'concluido')
+        """
+        
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute(sql_query)
+        rows = cursor.fetchall()
+        
+        if not rows:
+            conn.close()
+            return []
+            
+        colunas = [column[0] for column in cursor.description]
+        resultados = [dict(zip(colunas, row)) for row in rows]
+        
+        conn.close()
+        return resultados
+    except Exception as e:
+        print(f"Erro BD (Monitoramento de Erros): {e}")
+        return []
 
 def buscar_dados_hoje():
     try:
@@ -98,10 +141,8 @@ def buscar_chamado_especifico(coluna_busca, valor):
 
 def buscar_clientes_por_termo(termo):
     try:
-        # Pega apenas os números do que o usuário digitou (caso ele digite com máscara)
         termo_numeros = ''.join(filter(str.isdigit, termo))
         
-        # O REPLACE no SQL remove pontos, barras e traços da coluna CNPJ na hora de comparar
         sql_query = """
         SELECT DISTINCT [Cliente Codigo], Cliente 
         FROM sgrp_atendimentos_status 
@@ -159,6 +200,60 @@ def buscar_ultimos_chamados_cliente(codigo_cliente):
         return None
 
 
+# ----------------- THREAD DE MONITORAMENTO DE ERROS -----------------
+def monitorar_erros_diarios():
+    """Roda em segundo plano checando chamados críticos abertos a cada 2 horas entre 10h e 19h"""
+    global chamados_notificados_hoje, data_notificacao_atual
+    
+    while True:
+        agora_brasil = datetime.utcnow() - timedelta(hours=3)
+        
+        if agora_brasil.date() != data_notificacao_atual:
+            chamados_notificados_hoje.clear()
+            data_notificacao_atual = agora_brasil.date()
+
+        if 10 <= agora_brasil.hour < 19:
+            erros = buscar_erros_hoje()
+            novos_erros = [e for e in erros if e['Sac'] not in chamados_notificados_hoje]
+
+            if novos_erros:
+                for erro in novos_erros:
+                    cliente = str(erro.get('Cliente', 'Não informado')).title()
+                    atendente = str(erro.get('Atendente', 'Não atribuído')).title()
+                    motivo = erro.get('Motivo', 'Não especificado')
+                    assunto = erro.get('Assunto', 'Não informado')
+                    situacao = erro.get('Situacao', 'Em aberto')
+                    data_br = erro.get('Data_abertura_br', 'Sem data')
+                    
+                    mensagem_alerta = (
+                        f"🚨 *ALERTA DE SISTEMA: Novo Chamado Crítico Pendente*\n\n"
+                        f"📌 *SAC:* `{erro['Sac']}`\n"
+                        f"🏢 *Cliente:* {cliente}\n"
+                        f"💬 *Assunto:* {assunto}\n"
+                        f"🛠 *Motivo:* {motivo}\n"
+                        f"📍 *Situação:* {situacao}\n"
+                        f"👤 *Atendente:* {atendente}\n"
+                        f"📅 *Data:* {data_br}"
+                    )
+                    
+                    for chat_id in IDS_AUTORIZADOS:
+                        try:
+                            bot.send_message(chat_id, mensagem_alerta, parse_mode="Markdown")
+                        except Exception as e:
+                            print(f"Erro ao enviar alerta para {chat_id}: {e}")
+                    
+                    chamados_notificados_hoje.add(erro['Sac'])
+            
+            # Aguarda 2 horas
+            time.sleep(7200)
+        else:
+            # Fora do horário, aguarda 15 minutos para tentar de novo
+            time.sleep(900)
+
+thread_erros = threading.Thread(target=monitorar_erros_diarios, daemon=True)
+thread_erros.start()
+
+
 # ----------------- FUNÇÕES DO TELEGRAM -----------------
 
 def enviar_menu_com_explicacao(chat_id, nome_usuario):
@@ -173,7 +268,7 @@ def enviar_menu_com_explicacao(chat_id, nome_usuario):
         InlineKeyboardButton("❌ Encerrar Atendimento", callback_data="btn_encerrar")
     )
     
-    texto = f"👋 Olá, **{nome_usuario}**! Bem-vindo ao assistente de gestão da Suprasoft.\n\n"
+    texto = f"👋 Olá, **{nome_usuario}**! Bem-vindo ao assistente de gestão.\n\n"
     texto += "Escolha abaixo a opção desejada:\n"
     
     bot.send_message(chat_id, texto, reply_markup=markup, parse_mode="Markdown")
@@ -211,7 +306,7 @@ def gerenciar_mensagens(mensagem):
     if mensagem.text.strip() == SENHA_LIBERACAO:
         IDS_AUTORIZADOS.append(chat_id)
         ultima_interacao[chat_id] = tempo_atual
-        bot.reply_to(mensagem, "✅ **Senha aceita com sucesso!** Acesso liberado à gestão da Suprasoft.")
+        bot.reply_to(mensagem, "✅ **Senha aceita com sucesso!** Acesso liberado à gestão.")
         enviar_menu_com_explicacao(chat_id, nome_usuario)
         return
 
@@ -406,7 +501,7 @@ def callback_query(call):
     if call.data == "btn_resumo":
         total_atendimentos = len(df)
         resumo_atendentes = df.groupby('Atendente').size().reset_index(name='Quantidade').sort_values(by='Quantidade', ascending=False)
-        texto_resposta = f"📊 *Resumo da Operação - SupraMAIS*\n📅 Data: {data_hoje}\n\n📈 *TOTAL DE CHAMADOS HOJE: {total_atendimentos}*\n\n👥 *Volume por Atendente:*\n"
+        texto_resposta = f"📊 *Resumo da Operação*\n📅 Data: {data_hoje}\n\n📈 *TOTAL DE CHAMADOS HOJE: {total_atendimentos}*\n\n👥 *Volume por Atendente:*\n"
         for _, row in resumo_atendentes.iterrows(): texto_resposta += f"👤 {str(row['Atendente']).title()}: {row['Quantidade']} chamado(s)\n"
         bot.send_message(chat_id, texto_resposta, reply_markup=markup_voltar, parse_mode="Markdown")
 
@@ -422,5 +517,5 @@ def callback_query(call):
         for _, row in resumo_modulos.iterrows(): texto_resposta += f"🔹 {str(row['Modulo']).strip().title()}: *{row['Quantidade']}* chamado(s)\n"
         bot.send_message(chat_id, texto_resposta, reply_markup=markup_voltar, parse_mode="Markdown")
 
-print("Robô ativo com tratamento de máscara para buscas por CNPJ.")
+print("Robô ativo e monitorando.")
 bot.infinity_polling()
