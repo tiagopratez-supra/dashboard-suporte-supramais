@@ -1,10 +1,10 @@
 # =============================================================================
 # Central de Suporte — SupraMAIS  |  Command Center
-# Stack: Streamlit + pymssql + pandas + plotly
+# Stack: Streamlit + pymssql + pandas + plotly + streamlit-autorefresh
 # =============================================================================
 
 import streamlit as st
-import streamlit.components.v1 as components
+from streamlit_autorefresh import st_autorefresh
 import pandas as pd
 import pymssql
 import plotly.express as px
@@ -22,7 +22,9 @@ st.set_page_config(
     layout="wide",
     initial_sidebar_state="collapsed",
 )
-components.html('<script>setTimeout(()=>window.parent.location.reload(),1800000)</script>', height=0)
+
+# Atualiza a página silenciosamente a cada 30 minutos (1800000 ms)
+st_autorefresh(interval=1800000, key="data_refresh")
 
 # ── PALETA ─────────────────────────────────────────────────────────────────────
 BG     = "#0F172A"
@@ -239,8 +241,9 @@ def tmr_fmt(h):
     return f"{h/24:.1f} dias"
 
 
-# ── QUERY & CACHE (SQL ATUALIZADO COM HORAS E FORMATO BR) ────────────────────
-@st.cache_data(ttl=1800, show_spinner="Carregando dados…")
+# ── QUERY & CACHE (SQL ATUALIZADO) ────────────────────────────────────────────
+# TTL ajustado para 1790 (29 min e 50s) para limpar o cache 10s antes do autorefresh (1800s)
+@st.cache_data(ttl=1790, show_spinner="Carregando dados…")
 def carregar_dados() -> pd.DataFrame:
     cfg = st.secrets["database"]
     srv = cfg["server"]
@@ -276,46 +279,6 @@ def carregar_dados() -> pd.DataFrame:
         df[col] = pd.to_datetime(df[col], format="%d/%m/%Y %H:%M:%S", errors="coerce")
         
     df["TMR_h"] = (df["Data_Solucao"] - df["Data_abertura"]).dt.total_seconds() / 3600
-    return df
-
-@st.cache_data(ttl=3600, show_spinner="Carregando contratos vigentes…")
-def carregar_contratos() -> pd.DataFrame:
-    cfg = st.secrets["database"]
-    srv = cfg["server"]
-    if "," in srv:
-        host, port = srv.split(",", 1)
-        port = int(port)
-    else:
-        host, port = srv, 1433
-    conn = pymssql.connect(
-        server=host, port=port,
-        database=cfg["database"],
-        user=cfg["username"],
-        password=cfg["password"],
-        login_timeout=30,
-    )
-    SQL_QUERY = """
-    SELECT 
-        ct.fk_cliente_fornecedor AS CLIENTE_codigo, 
-        cf.nome AS RAZAO, 
-        cf.cnpj AS CNPJ,
-        CASE ct.id_situacao 
-            WHEN 1 THEN 'VIGENTE' 
-            WHEN 2 THEN 'FINALIZADO' 
-            WHEN 3 THEN 'RESCINDIDO' 
-            WHEN 4 THEN 'SUSPENSO'
-        END AS SITUACAO,
-        fl.clifor_codigo AS cod_matrix
-    FROM sgc.dbo.contrato ct
-    JOIN sgc.dbo.cliente_fornecedor cf ON cf.codigo = ct.fk_cliente_fornecedor
-    JOIN sgc.dbo.cidade c ON c.codigo = cf.cid_codigo
-    JOIN sgc.dbo.tipo_contrato tc ON tc.codigo = ct.fk_tipo_contrato
-    LEFT JOIN sgc.dbo.filial fl ON fl.clifor_codigo_filial = cf.codigo
-    WHERE ct.id_situacao = 1
-    ORDER BY cf.nome
-    """
-    df = pd.read_sql(SQL_QUERY, conn)
-    conn.close()
     return df
 
 
@@ -1081,47 +1044,7 @@ def aba_situacao(df, df_raw):
     except Exception as e:
         st.warning(f"Seção de backlog indisponível: {e}")
 
-    # ================= NOVO: SEÇÃO DE CADASTRADAS E EM ANÁLISE =================
-    st.markdown('<span class="sec-t">📥 Fila Inicial: Cadastradas & Em Análise (Ignora Filtros)</span>', unsafe_allow_html=True)
-    try:
-        # Usa df_raw para ignorar a data e regex para pegar variações (analise/análise/cadastrado/cadastrada)
-        mask_fila = df_raw["Situacao"].astype(str).str.contains(r'cadastrad|an[aá]lise', case=False, na=False)
-        df_fila = df_raw[mask_fila].copy()
-        
-        if not df_fila.empty:
-            qtd_cad = len(df_fila[df_fila["Situacao"].astype(str).str.contains("cadastrad", case=False, na=False)])
-            qtd_ana = len(df_fila[df_fila["Situacao"].astype(str).str.contains("an[aá]lise", case=False, na=False)])
-            
-            st.markdown(f"""<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:12px">
-              {kpi("Total na Fila", f"{len(df_fila)}", "aguardando tratativa", "📥", BRAND)}
-              {kpi("Cadastradas", f"{qtd_cad}", "status inicial", "🆕", ORANGE)}
-              {kpi("Em Análise", f"{qtd_ana}", "em verificação", "🔍", GOLD)}
-            </div>""", unsafe_allow_html=True)
-            
-            cf1, cf2 = st.columns([2, 3])
-            with cf1:
-                st.markdown(co("Volume por Atendente / Fila"), unsafe_allow_html=True)
-                df_fila_ag = df_fila.groupby("Atendente").size().reset_index(name="Qtd").sort_values("Qtd", ascending=True)
-                fig_f = px.bar(df_fila_ag, x="Qtd", y="Atendente", orientation="h", text="Qtd",
-                               color="Qtd", color_continuous_scale=[[0, CARD2], [1, BRAND]])
-                fig_f.update_coloraxes(showscale=False)
-                fig_f.update_traces(textposition="outside", cliponaxis=False, textfont=dict(color=WHITE))
-                fig_f.update_layout(**pb(max(200, len(df_fila_ag)*32), xaxis=dict(showgrid=False), yaxis=dict(showgrid=False), xaxis_title="", yaxis_title=""))
-                st.plotly_chart(fig_f, use_container_width=True)
-                st.markdown(cc(), unsafe_allow_html=True)
-                
-            with cf2:
-                st.markdown(co("📋 Relação de Chamados (Mais Antigos Primeiro)"), unsafe_allow_html=True)
-                df_fila_show = df_fila.sort_values("Data_abertura")[["Sac", "Data_abertura", "Situacao", "Cliente", "Atendente"]]
-                df_fila_show["Data_abertura"] = df_fila_show["Data_abertura"].dt.strftime('%d/%m/%Y %H:%M')
-                st.dataframe(df_fila_show.reset_index(drop=True), use_container_width=True, height=max(200, len(df_fila_ag)*32))
-                st.markdown(cc(), unsafe_allow_html=True)
-        else:
-            st.info("Nenhum chamado com status 'Cadastrada' ou 'Em análise' encontrado.")
-    except Exception as e:
-        st.warning(f"Erro ao gerar seção de fila inicial: {e}")
-
-    # ================= SEÇÃO DE FEEDBACKS =================
+    # ================= NOVO: SEÇÃO DE FEEDBACKS =================
     st.markdown('<span class="sec-t">⭐ Feedbacks Acumulados por Atendente (Ignora Filtros)</span>', unsafe_allow_html=True)
     try:
         # Busca exclusiva no campo Situação do banco completo (df_raw)
@@ -1451,65 +1374,6 @@ def aba_alertas(df, df_raw):
 
 
 # ══════════════════════════════════════════════════════════════════════════════
-#  ABA 8 — CLIENTES INATIVOS (Radar)
-# ══════════════════════════════════════════════════════════════════════════════
-def aba_inativos(df_raw, df_contratos):
-    st.markdown('<span class="sec-t">📡 Radar de Inatividade (Customer Success)</span>', unsafe_allow_html=True)
-    
-    # 1. Tratamento de IDs e criação da chave do Grupo (Matriz)
-    df_c = df_contratos.copy()
-    df_c['CLIENTE_codigo'] = df_c['CLIENTE_codigo'].astype(str).str.replace(r'\.0$', '', regex=True)
-    df_c['cod_matrix'] = df_c['cod_matrix'].astype(str).str.replace(r'\.0$', '', regex=True).replace('nan', None)
-    
-    # Se tem cod_matrix, ele é o grupo. Se não, o próprio cliente é o grupo.
-    df_c['ID_Grupo'] = df_c['cod_matrix'].combine_first(df_c['CLIENTE_codigo'])
-    
-    # 2. Mapear tickets para o Grupo
-    map_grupo = df_c.set_index('CLIENTE_codigo')['ID_Grupo'].to_dict()
-    df_t = df_raw.copy()
-    df_t['Cliente_Codigo'] = df_t['Cliente_Codigo'].astype(str).str.replace(r'\.0$', '', regex=True)
-    df_t['ID_Grupo'] = df_t['Cliente_Codigo'].map(map_grupo).fillna(df_t['Cliente_Codigo'])
-    
-    # 3. Último contato geral do grupo
-    ultimos = df_t.groupby('ID_Grupo')['Data_abertura'].max().reset_index()
-    ultimos.rename(columns={'Data_abertura': 'Ultimo_Contato'}, inplace=True)
-    
-    # 4. Juntar as bases e calcular inatividade
-    df_view = df_c.merge(ultimos, on='ID_Grupo', how='left')
-    hoje = pd.Timestamp(date.today())
-    df_view['Dias_Inativo'] = (hoje - df_view['Ultimo_Contato']).dt.days
-    
-    # Filtro Interativo na tela
-    dias_filtro = st.slider("⚠️ Mostrar clientes vigentes sem contato há mais de (dias):", 
-                            min_value=0, max_value=365, value=60, step=15)
-    
-    # Filtrar apenas o recorte selecionado
-    df_view = df_view[df_view['Dias_Inativo'] >= dias_filtro].sort_values('Dias_Inativo', ascending=False)
-    
-    # 5. Formatar Data Padrão BR e exibir
-    df_view['Último Contato'] = df_view['Ultimo_Contato'].dt.strftime('%d/%m/%Y').fillna('Sem registro histórico')
-    df_view['Dias Inativo'] = df_view['Dias_Inativo'].fillna(9999).astype(int).astype(str).replace('9999', '∞')
-    
-    # KPIs da aba
-    total_vigentes = len(df_c)
-    total_inativos = len(df_view)
-    taxa = (total_inativos / total_vigentes * 100) if total_vigentes > 0 else 0
-    
-    st.markdown(f"""
-    <div class="kpi-grid" style="grid-template-columns:repeat(3,1fr)">
-      {kpi("Base Vigente", f"{total_vigentes:,}", "contratos ativos", "🏢", TEAL)}
-      {kpi("Inativos", f"{total_inativos:,}", f"há +{dias_filtro} dias", "⚠️", ORANGE if taxa < 30 else DANGER)}
-      {kpi("Taxa de Risco", f"{taxa:.1f}%", "da base sem contato", "📉", DANGER if taxa > 30 else GREEN)}
-    </div>
-    """, unsafe_allow_html=True)
-    
-    st.markdown(co(f"📋 Contratos Vigentes — Sem contato há mais de {dias_filtro} dias"), unsafe_allow_html=True)
-    cols = ['CLIENTE_codigo', 'RAZAO', 'CNPJ', 'SITUACAO', 'Último Contato', 'Dias Inativo']
-    st.dataframe(df_view[cols].reset_index(drop=True), use_container_width=True, height=500)
-    st.markdown(cc(), unsafe_allow_html=True)
-
-
-# ══════════════════════════════════════════════════════════════════════════════
 #  MAIN
 # ══════════════════════════════════════════════════════════════════════════════
 def main():
@@ -1537,7 +1401,6 @@ def main():
 
     try:
         df_raw = carregar_dados()
-        df_contratos = carregar_contratos()
     except Exception as e:
         st.error(f"❌ Erro ao conectar: `{e}`")
         st.stop()
@@ -1664,7 +1527,6 @@ def main():
         "🎫 Situação",
         "📈 SLA & KPIs",
         "🚨 Alertas & Gestão",
-        "📡 Radar Inativos",
     ])
 
     with tabs[0]: aba_hoje(df_raw, hoje)
@@ -1675,7 +1537,6 @@ def main():
     with tabs[5]: aba_situacao(df, df_raw)
     with tabs[6]: aba_sla(df)
     with tabs[7]: aba_alertas(df, df_raw)
-    with tabs[8]: aba_inativos(df_raw, df_contratos)
 
 
 if __name__ == "__main__":

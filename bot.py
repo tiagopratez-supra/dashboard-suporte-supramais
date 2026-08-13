@@ -15,8 +15,11 @@ bot = telebot.TeleBot(CHAVE_TELEGRAM)
 # Senha de liberação automática para novos usuários
 SENHA_LIBERACAO = "Suprabot1762"
 
-# Lista inicial de IDs autorizados
-IDS_AUTORIZADOS = [739554583] 
+# ID que receberá de forma exclusiva as notificações proativas de erros
+ID_NOTIFICACAO_ERRO = 8809929957
+
+# Lista inicial de IDs autorizados para o Menu (já inclui o seu para evitar pedir senha)
+IDS_AUTORIZADOS = [8809929957] 
 
 # Dicionários de controle de estado e tempo
 estado_usuarios = {}
@@ -236,11 +239,11 @@ def monitorar_erros_diarios():
                         f"📅 *Data:* {data_br}"
                     )
                     
-                    for chat_id in IDS_AUTORIZADOS:
-                        try:
-                            bot.send_message(chat_id, mensagem_alerta, parse_mode="Markdown")
-                        except Exception as e:
-                            print(f"Erro ao enviar alerta para {chat_id}: {e}")
+                    # Notifica SOMENTE o ID que você definiu para os erros
+                    try:
+                        bot.send_message(ID_NOTIFICACAO_ERRO, mensagem_alerta, parse_mode="Markdown")
+                    except Exception as e:
+                        print(f"Erro ao enviar alerta para {ID_NOTIFICACAO_ERRO}: {e}")
                     
                     chamados_notificados_hoje.add(erro['Sac'])
             
