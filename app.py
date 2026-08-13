@@ -24,7 +24,7 @@ st.set_page_config(
 )
 
 # Atualiza a página silenciosamente a cada 30 minutos (1800000 ms)
-st_autorefresh(interval=300000, key="data_refresh")
+st_autorefresh(interval=1800000, key="data_refresh")
 
 # ── PALETA ─────────────────────────────────────────────────────────────────────
 BG     = "#0F172A"
@@ -243,7 +243,7 @@ def tmr_fmt(h):
 
 # ── QUERY & CACHE (SQL ATUALIZADO) ────────────────────────────────────────────
 # TTL ajustado para 1790 (29 min e 50s) para limpar o cache 10s antes do autorefresh (1800s)
-@st.cache_data(ttl=290, show_spinner="Carregando dados…")
+@st.cache_data(ttl=1790, show_spinner="Carregando dados…")
 def carregar_dados() -> pd.DataFrame:
     cfg = st.secrets["database"]
     srv = cfg["server"]
