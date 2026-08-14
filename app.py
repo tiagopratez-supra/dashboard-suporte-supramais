@@ -65,9 +65,9 @@ header[data-testid="stHeader"] {{ background:transparent !important; }}
 .kpi-card {{
   background:{CARD}; border:1px solid {BORDER};
   border-radius:10px; padding:8px 12px 6px;
-  position:relative; overflow:hidden; min-height:74px;
+  position:relative; min-height:74px; /* Sem overflow hidden para o tooltip vazar */
 }}
-.kpi-glow {{ position:absolute; top:0; left:0; right:0; height:3px; border-radius:10px 10px 0 0; }}
+.kpi-glow {{ position:absolute; top:0; left:0; right:0; height:3px; border-radius:10px 10px 0 0; overflow:hidden; }}
 .kpi-icon {{ position:absolute; right:8px; top:8px; font-size:1.3rem; opacity:0.08; }}
 .kpi-label {{
   font-size:0.58rem; font-weight:700; letter-spacing:0.4px;
@@ -105,15 +105,16 @@ header[data-testid="stHeader"] {{ background:transparent !important; }}
   margin:10px 0 6px; display:block;
 }}
 
-/* ── Tooltip ── */
-.tip {{ position:relative; display:inline-block; cursor:help; border-bottom:1px dashed {MUTED}; }}
+/* ── Tooltip (Hint Inteligente) ── */
+.tip {{ position:relative; display:inline-block; cursor:help; font-weight:normal; letter-spacing:normal; }}
 .tip::after {{
   content:attr(data-tip);
-  position:absolute; bottom:120%; left:50%; transform:translateX(-50%);
+  position:absolute; bottom:130%; left:50%; transform:translateX(-50%);
   background:{CARD2}; color:{WHITE}; border:1px solid {BORDER};
-  padding:6px 10px; border-radius:8px; font-size:0.7rem; font-weight:400;
-  white-space:normal; width:220px; opacity:0; pointer-events:none;
-  transition:opacity .2s; z-index:9999; line-height:1.4;
+  padding:8px 12px; border-radius:8px; font-size:0.7rem; font-weight:500;
+  white-space:normal; width:260px; opacity:0; pointer-events:none;
+  transition:opacity .2s; z-index:99999; line-height:1.4;
+  box-shadow: 0 10px 25px rgba(0,0,0,0.5); text-transform:none;
 }}
 .tip:hover::after {{ opacity:1; }}
 
@@ -192,8 +193,13 @@ def pb(h=300, **kw):
         **kw,
     )
 
-def co(title=""):
-    t = f'<div class="chart-title">{title}</div>' if title else ""
+def co(title="", tooltip=""):
+    if tooltip:
+        safe_tip = tooltip.replace('"', '&quot;')
+        icon = f' <span class="tip" data-tip="{safe_tip}" style="font-size:.7rem;opacity:.6;margin-left:4px">ⓘ</span>'
+        t = f'<div class="chart-title">{title}{icon}</div>'
+    else:
+        t = f'<div class="chart-title">{title}</div>' if title else ""
     return f'<div class="chart-card">{t}'
 
 def cc():
@@ -201,11 +207,11 @@ def cc():
 
 def tip(term, desc):
     safe = desc.replace('"', '&quot;')
-    return f'<span class="tip" data-tip="{safe}">{term}</span>'
+    return f'<span class="tip" data-tip="{safe}" style="border-bottom:1px dashed {MUTED}">{term}</span>'
 
 def kpi(label, val, sub="", icon="📊", color=TEAL, badge="", bcls="b-muted", tip_text=""):
     safe_tip = tip_text.replace('"', '&quot;')
-    ti = f' <span class="tip" data-tip="{safe_tip}" style="font-size:.65rem;opacity:.5">ⓘ</span>' if tip_text else ""
+    ti = f' <span class="tip" data-tip="{safe_tip}" style="font-size:.7rem;opacity:.6">ⓘ</span>' if tip_text else ""
     ba = f'<span class="kpi-badge {bcls}">{badge}</span>' if badge else ""
     return f"""<div class="kpi-card">
   <div class="kpi-glow" style="background:{color}"></div>
@@ -292,7 +298,7 @@ def aba_hoje(df_raw, hoje):
     ab_h   = len(df_h)
     sol_h  = len(df_sol_h)
     
-    # Backlog restrito: Apenas chamados abertos hoje que NÃO foram solucionados
+    # Backlog restrito: Apenas chamados abertos hoje que NÃO foram solucionados hoje
     backlog_hoje = df_h[df_h["Data_Solucao"].isna()].shape[0]
     
     fcr_h  = safe_pct(df_h["Finalizado_Mesmo_Dia"].sum(), ab_h)
@@ -304,18 +310,18 @@ def aba_hoje(df_raw, hoje):
     # KPIs do dia
     st.markdown(f"""
     <div class="kpi-grid">
-      {kpi("Abertos Hoje",      f"{ab_h}",       "novos chamados hoje",      "📥", BRAND)}
-      {kpi("Resolvidos Hoje",   f"{sol_h}",      "fechamentos hoje",         "✅", GREEN)}
+      {kpi("Abertos Hoje",      f"{ab_h}",       "novos chamados hoje",      "📥", BRAND, tip_text="Volume total de novos chamados registrados no sistema na data de hoje.")}
+      {kpi("Resolvidos Hoje",   f"{sol_h}",      "fechamentos hoje",         "✅", GREEN, tip_text="Total de chamados que receberam data de solução hoje (independente do dia que foram abertos).")}
       {kpi("FCR do Dia", f"{fcr_h:.1f}%",        "1º contato",               "⚡", GOLD,
            "Meta: 70%", "b-green" if fcr_h>=70 else "b-red",
-           tip_text="Resolução no Primeiro Contato: % dos chamados de hoje finalizados sem retorno.")}
+           tip_text="Cálculo: (Chamados finalizados no mesmo dia / Total de chamados abertos hoje) * 100.")}
       {kpi("TMR do Dia", tmr_fmt(tmr_h_v),       "tempo médio resolução",    "⏱️", PURPLE,
-           tip_text="Tempo Médio de Resolução: calculado entre abertura e solução dos chamados encerrados hoje.")}
+           tip_text="Tempo Médio de Resolução dos chamados que foram ENCERRADOS na data de hoje.")}
       {kpi("Pendentes Hoje",    f"{backlog_hoje:,}",  "criados e não resolvidos",  "🗂️", ORANGE if backlog_hoje>0 else GREEN,
-           tip_text="Chamados abertos na data de hoje que ainda estão sem solução.")}
-      {kpi("Ativos Hoje",       str(df_h["Atendente"].nunique()), "atendentes com chamados", "👥", TEAL)}
+           tip_text="Quantidade de chamados que foram ABERTOS HOJE, mas que ainda não receberam solução.")}
+      {kpi("Ativos Hoje",       str(df_h["Atendente"].nunique()), "atendentes com chamados", "👥", TEAL, tip_text="Quantidade de atendentes diferentes que tiveram pelo menos um chamado atribuído a eles hoje.")}
       {kpi("Clientes Hoje",     f"{clientes_hj}", "atendidos hoje",         "🏢", PURPLE,
-           tip_text="Quantidade de clientes distintos que abriram chamados na data de hoje.")}
+           tip_text="Quantidade de clientes distintos (CNPJ/Código) que abriram chamados na data de hoje.")}
     </div>
     """, unsafe_allow_html=True)
 
@@ -335,7 +341,7 @@ def aba_hoje(df_raw, hoje):
 
     with r1c1:
         try:
-            st.markdown(co("📊 Atendimentos Hoje: Atendente × Canal"), unsafe_allow_html=True)
+            st.markdown(co("📊 Atendimentos Hoje: Atendente × Canal", "Distribuição dos chamados abertos hoje por membro da equipe, detalhado pela origem de entrada (Telefone, WhatsApp, etc)."), unsafe_allow_html=True)
             df_at_or = df_h.groupby(["Atendente", "Origem"]).size().reset_index(name="Qtd")
             
             df_at_or["Atendente_Lbl"] = df_at_or["Atendente"].apply(lambda x: f"{x} [{tot_ag[x]}]")
@@ -361,7 +367,7 @@ def aba_hoje(df_raw, hoje):
 
     with r1c2:
         try:
-            st.markdown(co("🧩 Mapa de Calor Hoje: Atendente × Módulo"), unsafe_allow_html=True)
+            st.markdown(co("🧩 Mapa de Calor Hoje: Atendente × Módulo", "Top 5 módulos mais acionados hoje mapeados contra os atendentes. Cores mais claras indicam maior concentração de chamados na mesma pessoa/módulo."), unsafe_allow_html=True)
             top_mod_h = df_h["Modulo"].value_counts().nlargest(5).index
             df_hm = df_h.copy()
             df_hm["Mod_x"] = df_hm["Modulo"].apply(lambda x: x if x in top_mod_h else "Outros")
@@ -393,7 +399,7 @@ def aba_hoje(df_raw, hoje):
     r2c1, r2c2, r2c3 = st.columns([1.5, 1.5, 1])
 
     with r2c1:
-        st.markdown(co("🏆 Top 10 Clientes — Hoje"), unsafe_allow_html=True)
+        st.markdown(co("🏆 Top 10 Clientes — Hoje", "Ranking absoluto dos clientes (códigos) que mais registraram tickets na data atual."), unsafe_allow_html=True)
         dr_h = df_h.groupby("Cliente").size().reset_index(name="Total").sort_values("Total", ascending=False).head(10)
         if not dr_h.empty:
             st.markdown(rank_html(dr_h, "Cliente", "Total", TEAL), unsafe_allow_html=True)
@@ -403,7 +409,7 @@ def aba_hoje(df_raw, hoje):
 
     with r2c2:
         try:
-            st.markdown(co("🎯 Principais Motivos — Hoje"), unsafe_allow_html=True)
+            st.markdown(co("🎯 Principais Motivos — Hoje", "Classificação dos motivos (tipificações) mais selecionados pelos atendentes nos chamados do dia."), unsafe_allow_html=True)
             df_mot_h = df_h.groupby("Motivo").size().reset_index(name="Qtd").nlargest(8,"Qtd").sort_values("Qtd")
             fig2 = px.bar(df_mot_h, y="Motivo", x="Qtd", orientation="h", text="Qtd",
                            color="Qtd", color_continuous_scale=[[0,CARD2],[1,BRAND]])
@@ -421,7 +427,7 @@ def aba_hoje(df_raw, hoje):
 
     with r2c3:
         try:
-            st.markdown(co("📡 Origem — Hoje"), unsafe_allow_html=True)
+            st.markdown(co("📡 Origem — Hoje", "Proporção consolidada das origens de entrada dos chamados ao longo do dia."), unsafe_allow_html=True)
             df_or_h = df_h.groupby("Origem").size().reset_index(name="Qtd")
             fig3 = px.pie(df_or_h, names="Origem", values="Qtd", hole=0.5,
                            color_discrete_sequence=CORES)
@@ -435,7 +441,7 @@ def aba_hoje(df_raw, hoje):
             st.warning(f"Gráfico indisponível: {e}")
 
         try:
-            st.markdown(co("🔵 Situação — Hoje"), unsafe_allow_html=True)
+            st.markdown(co("🔵 Situação — Hoje", "Onde e em qual status os chamados que foram abertos hoje se encontram neste exato momento."), unsafe_allow_html=True)
             df_sit_h = df_h.groupby("Situacao").size().reset_index(name="Qtd")
             fig4 = px.pie(df_sit_h, names="Situacao", values="Qtd", hole=0.5,
                            color_discrete_sequence=CORES)
@@ -500,17 +506,17 @@ def aba_por_hora(df_base, hoje):
     media_hora = len(df_dia) / horas_ativas if horas_ativas > 0 else 0
     
     st.markdown(f"""<div style="display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:12px">
-      {kpi("Total no Dia", f"{len(df_dia):,}", "com os filtros aplicados", "📋", TEAL)}
-      {kpi("Atendentes", f"{df_dia['Atendente'].nunique()}", "com chamados registrados", "👥", BRAND)}
-      {kpi("Clientes", f"{df_dia['Cliente'].nunique()}", "atendidos na data", "🏢", PURPLE)}
-      {kpi("Média por Hora", f"{media_hora:.1f}", "chamados por hora ativa", "⏱️", GREEN)}
-      {kpi("Pico de Volume", f"{pico_hora}", f"com {pico_qtd} chamados neste horário", "🔥", ORANGE)}
+      {kpi("Total no Dia", f"{len(df_dia):,}", "com os filtros aplicados", "📋", TEAL, tip_text="Total bruto de chamados gerados no dia exato escolhido no calendário acima.")}
+      {kpi("Atendentes", f"{df_dia['Atendente'].nunique()}", "com chamados registrados", "👥", BRAND, tip_text="Tamanho da força de trabalho que atuou ou tomou posse de tickets neste dia.")}
+      {kpi("Clientes", f"{df_dia['Cliente'].nunique()}", "atendidos na data", "🏢", PURPLE, tip_text="Carga de CNPJs únicos que acionaram o suporte neste dia.")}
+      {kpi("Média por Hora", f"{media_hora:.1f}", "chamados por hora ativa", "⏱️", GREEN, tip_text="Cálculo: Divide-se o Total do Dia apenas pelas horas em que existiu atividade real de abertura de chamados.")}
+      {kpi("Pico de Volume", f"{pico_hora}", f"com {pico_qtd} chamados neste horário", "🔥", ORANGE, tip_text="Identifica exatamente a faixa horária de 60 minutos onde o fluxo de ligações/mensagens foi o maior do dia.")}
     </div>""", unsafe_allow_html=True)
 
     c1, c2 = st.columns(2)
     with c1:
         try:
-            st.markdown(co(f"📊 Fluxo de Chamados por Hora × Atendente"), unsafe_allow_html=True)
+            st.markdown(co(f"📊 Fluxo de Chamados por Hora × Atendente", "Gráfico empilhado mostrando a divisão da carga horária. Permite ver quem assumiu mais ligações nas horas de pico."), unsafe_allow_html=True)
             dh_at = df_dia.groupby(["Hora", "Atendente"]).size().reset_index(name="Qtd")
             fig1 = px.bar(dh_at, x="Hora", y="Qtd", color="Atendente", text="Qtd",
                           color_discrete_sequence=CORES)
@@ -524,7 +530,7 @@ def aba_por_hora(df_base, hoje):
             
     with c2:
         try:
-            st.markdown(co("🧩 Fluxo de Chamados por Hora × Módulo (Top 5)"), unsafe_allow_html=True)
+            st.markdown(co("🧩 Fluxo de Chamados por Hora × Módulo (Top 5)", "Mostra o comportamento do uso do sistema. Exemplo: picos de 'NF-e' ocorrem logo cedo ou no fim do dia?"), unsafe_allow_html=True)
             top5m = df_dia["Modulo"].value_counts().nlargest(5).index
             df_hm = df_dia.copy()
             df_hm["Mod_x"] = df_hm["Modulo"].apply(lambda x: x if x in top5m else "Outros")
@@ -566,7 +572,7 @@ def aba_resumo(df):
 
     with c1:
         try:
-            st.markdown(co("📊 Volume Diário + Média Móvel 7 Dias"), unsafe_allow_html=True)
+            st.markdown(co("📊 Volume Diário + Média Móvel 7 Dias", "Barras verticais mostram a contagem crua diária. A linha representa a média móvel dos últimos 7 dias, ajudando a identificar a tendência real e suavizar vales de finais de semana."), unsafe_allow_html=True)
             dd = df.groupby(df["Data_abertura"].dt.date).size().reset_index(name="Qtd")
             dd.columns = ["Data","Qtd"]
             dd = dd.sort_values("Data")
@@ -589,7 +595,7 @@ def aba_resumo(df):
 
     with c2:
         try:
-            st.markdown(co("🔵 Situação Atual"), unsafe_allow_html=True)
+            st.markdown(co("🔵 Situação Atual", "Panorama geral do status do banco de dados completo apenas dos chamados criados no período do filtro ativo."), unsafe_allow_html=True)
             ds = df.groupby("Situacao").size().reset_index(name="Qtd")
             fig2 = px.pie(ds, names="Situacao", values="Qtd", hole=0.52,
                            color_discrete_sequence=CORES)
@@ -606,7 +612,7 @@ def aba_resumo(df):
     c3, c4 = st.columns([3, 2])
     with c3:
         try:
-            st.markdown(co("🎯 Principais Motivos de Contato (Treemap)"), unsafe_allow_html=True)
+            st.markdown(co("🎯 Principais Motivos de Contato (Treemap)", "Mapa proporcional destacando os 20 principais agrupamentos de assunto. Áreas maiores e mais escuras representam dor operacional no sistema."), unsafe_allow_html=True)
             dm = df.groupby("Motivo").size().reset_index(name="Qtd").nlargest(20,"Qtd")
             fig3 = px.treemap(dm, path=["Motivo"], values="Qtd",
                                color="Qtd",
@@ -623,7 +629,7 @@ def aba_resumo(df):
 
     with c4:
         try:
-            st.markdown(co("📡 Canais de Entrada (Origem)"), unsafe_allow_html=True)
+            st.markdown(co("📡 Canais de Entrada (Origem)", "Soma consolidada do volume de entrada quebrado pelas vias de registro do Service Desk."), unsafe_allow_html=True)
             dor = df.groupby("Origem").size().reset_index(name="Qtd").sort_values("Qtd")
             fig4 = px.bar(dor, y="Origem", x="Qtd", orientation="h", text="Qtd",
                            color="Qtd", color_continuous_scale=[[0,CARD2],[1,TEAL]])
@@ -640,7 +646,7 @@ def aba_resumo(df):
             st.warning(f"Gráfico indisponível: {e}")
 
     try:
-        st.markdown(co("📈 Tendência Mensal — Abertos vs Resolvidos"), unsafe_allow_html=True)
+        st.markdown(co("📈 Tendência Mensal — Abertos vs Resolvidos", "Gráfico crucial de capacidade. Se a linha verde (resolvidos) ficar consistentemente abaixo da vermelha (abertos), sua fila de trabalho (backlog) está acumulando perigosamente mês a mês."), unsafe_allow_html=True)
         dm2 = df.copy()
         dm2["MesAno"] = dm2["Data_abertura"].dt.to_period("M").astype(str)
         ab_m = dm2.groupby("MesAno").size().reset_index(name="Abertos")
@@ -669,7 +675,7 @@ def aba_clientes(df):
     c1, c2 = st.columns([3, 2])
     with c1:
         try:
-            st.markdown(co("📦 Volume de Chamados por Cliente (Treemap)"), unsafe_allow_html=True)
+            st.markdown(co("📦 Volume de Chamados por Cliente (Treemap)", "Panorama visual de ofensores: evidencia graficamente a massa de tickets de CNPJs (limitado ao top 30 para visualização clara)."), unsafe_allow_html=True)
             dc = df.groupby("Cliente").size().reset_index(name="Qtd").nlargest(30,"Qtd")
             fig = px.treemap(dc, path=["Cliente"], values="Qtd",
                               color="Qtd",
@@ -685,7 +691,7 @@ def aba_clientes(df):
             st.warning(f"Gráfico indisponível: {e}")
 
     with c2:
-        st.markdown(co("🏆 Top 15 Clientes"), unsafe_allow_html=True)
+        st.markdown(co("🏆 Top 15 Clientes", "Ranking direto (Lista) para auditoria e prestação de contas dos 15 clientes com o maior volume de problemas submetidos."), unsafe_allow_html=True)
         dr = df.groupby("Cliente").size().reset_index(name="Total").sort_values("Total",ascending=False).head(15)
         st.markdown(rank_html(dr,"Cliente","Total",TEAL), unsafe_allow_html=True)
         st.markdown(cc(), unsafe_allow_html=True)
@@ -693,7 +699,7 @@ def aba_clientes(df):
     c3, c4 = st.columns([3, 2])
     with c3:
         try:
-            st.markdown(co("🌐 Hierarquia: Cliente → Módulo → Situação (Top 10)"), unsafe_allow_html=True)
+            st.markdown(co("🌐 Hierarquia: Cliente → Módulo → Situação (Top 10)", "Gráfico anelar e interativo. Clique no anel de um dos top 10 clientes para dar 'Zoom In' e ver exatamente de onde vem a dor dele (Módulo) e como os chamados estão hoje (Status)."), unsafe_allow_html=True)
             top10 = df.groupby("Cliente").size().nlargest(10).index
             ds = df[df["Cliente"].isin(top10)].copy()
             top5m = ds["Modulo"].value_counts().nlargest(5).index
@@ -710,7 +716,7 @@ def aba_clientes(df):
             st.warning(f"Gráfico indisponível: {e}")
 
     with c4:
-        st.markdown(co("🗣️ Top 15 Contatos"), unsafe_allow_html=True)
+        st.markdown(co("🗣️ Top 15 Contatos", "Identifica as pessoas físicas (CPF/Nomes) mais problemáticas ou que mais necessitam de apoio do seu time, somando a requisição independente da empresa que pertencem."), unsafe_allow_html=True)
         dc2 = df.groupby("Contato").size().reset_index(name="Total").sort_values("Total",ascending=False).head(15)
         st.markdown(rank_html(dc2,"Contato","Total",GOLD), unsafe_allow_html=True)
         st.markdown(cc(), unsafe_allow_html=True)
@@ -729,12 +735,12 @@ def aba_clientes(df):
         
         st.markdown(f"""
         <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:12px">
-          {kpi("Total Chamados", f"{tot:,}", "", "📋", TEAL)}
-          {kpi("Em Aberto", f"{ab:,}", "", "📌", ORANGE)}
+          {kpi("Total Chamados", f"{tot:,}", "", "📋", TEAL, tip_text="Volume total histórico de chamados no período para este CNPJ.")}
+          {kpi("Em Aberto", f"{ab:,}", "", "📌", ORANGE, tip_text="Chamados deste cliente que não contêm data de solução hoje.")}
           {kpi("FCR", f"{fcr:.1f}%", "1º contato", "⚡", GOLD,
-               tip_text="Resolução no Primeiro Contato")}
+               tip_text="O quão resolutivo o seu time é quando atende este cliente (fechado no 1º dia).")}
           {kpi("TMR", tmr_fmt(tmr), "tempo médio", "⏱️", GREEN,
-               tip_text="Tempo Médio de Resolução")}
+               tip_text="O tempo em dias/horas que este cliente espera para que a SupraMAIS resolva seus tickets.")}
         </div>""", unsafe_allow_html=True)
 
         r1, r2, r3 = st.columns(3)
@@ -816,9 +822,9 @@ def aba_atendentes(df):
   <td style="color:{MUTED}">{tmr_fmt(r['TMR_raw'])}</td>
 </tr>"""
 
-    h_fcr = tip("FCR%","Resolução no Primeiro Contato: % de chamados finalizados sem retorno. Meta ≥ 70%")
-    h_enc = tip("Enc.%","Taxa de Encerramento: % de chamados resolvidos no período")
-    h_tmr = tip("TMR","Tempo Médio de Resolução: média de dias/horas entre abertura e solução")
+    h_fcr = tip("FCR%","Resolução no Primeiro Contato: % de chamados finalizados sem retorno. Meta ≥ 70%. Métrica principal de qualidade.")
+    h_enc = tip("Enc.%","Taxa de Encerramento: Reflete a capacidade do analista de finalizar a demanda no período contra o que ele assume na fila.")
+    h_tmr = tip("TMR","Tempo Médio de Resolução: Média de dias/horas entre abertura e solução. Indica a velocidade técnica individual.")
     st.markdown(f"""<table class="att-table"><thead><tr>
   <th>Atendente</th><th>Total</th><th>Resolvidos</th><th>Em Aberto</th>
   <th>{h_fcr}</th><th>{h_enc}</th><th>{h_tmr}</th>
@@ -828,7 +834,7 @@ def aba_atendentes(df):
     cq, ch = st.columns([3,2])
     with cq:
         try:
-            st.markdown(co(f"🎯 Quadrante de Eficiência — Volume vs {tip('FCR%','Resolução no Primeiro Contato')}"), unsafe_allow_html=True)
+            st.markdown(co(f"🎯 Quadrante de Eficiência — Volume vs {tip('FCR%','Resolução no Primeiro Contato')}", "Matriz de talento da equipe. Linhas cruzadas mostram as médias atuais. O alvo verde é alta entrega combinada com alta qualidade e assertividade sem retrabalho."), unsafe_allow_html=True)
             med_t = df_at["Total"].median()
             med_f = df_at["FCR_pct"].median()
             maxt  = df_at["Total"].max() * 1.25
@@ -872,7 +878,7 @@ def aba_atendentes(df):
 
     with ch:
         try:
-            st.markdown(co("🧩 Mapa de Calor — Atendente × Módulo"), unsafe_allow_html=True)
+            st.markdown(co("🧩 Mapa de Calor — Atendente × Módulo", "Matriz de especialização técnica da força de trabalho. Analise as bolhas vermelhas para mapear quem são os especialistas (ou gargalos) de cada módulo no Service Desk."), unsafe_allow_html=True)
             top6m = df["Modulo"].value_counts().nlargest(6).index
             dhm = df.copy()
             dhm["Mod_x"] = dhm["Modulo"].apply(lambda x: x if x in top6m else "Outros")
@@ -939,7 +945,7 @@ def aba_situacao(df, df_raw):
 
     with c1:
         try:
-            st.markdown(co("📁 Tipo de Chamado"), unsafe_allow_html=True)
+            st.markdown(co("📁 Tipo de Chamado", "Classificação de natureza dos problemas gerados em sistema (Ex: Erro, Melhoria, Configuração, Intervenção Técnica, Dúvida)."), unsafe_allow_html=True)
             dt = df.groupby("Tipo").size().reset_index(name="Qtd")
             if not dt.empty:
                 fig = px.pie(dt, names="Tipo", values="Qtd", hole=0.52,
@@ -955,7 +961,7 @@ def aba_situacao(df, df_raw):
 
     with c2:
         try:
-            st.markdown(co("🔵 Situação Atual"), unsafe_allow_html=True)
+            st.markdown(co("🔵 Situação Atual", "Panorama macro do posicionamento e andamento da fila baseada no status sistêmico gerado na base de dados."), unsafe_allow_html=True)
             ds = df.groupby("Situacao").size().reset_index(name="Qtd").sort_values("Qtd",ascending=False)
             if not ds.empty:
                 fig2 = px.pie(ds, names="Situacao", values="Qtd", hole=0.52,
@@ -971,7 +977,7 @@ def aba_situacao(df, df_raw):
 
     with c3:
         try:
-            st.markdown(co("📈 Tendência de Situações — Mensal"), unsafe_allow_html=True)
+            st.markdown(co("📈 Tendência de Situações — Mensal", "Gráfico cronológico empilhado que reflete como o tratamento de tickets vem sendo alterado com o avanço dos meses (Agrupado nos top 5)."), unsafe_allow_html=True)
             dts = df.copy()
             dts["MesAno"] = dts["Data_abertura"].dt.to_period("M").astype(str)
             if not dts.empty and "Situacao" in dts.columns:
@@ -1004,7 +1010,7 @@ def aba_situacao(df, df_raw):
             ca, cb = st.columns([2,3])
             with ca:
                 try:
-                    st.markdown(co(f"⏳ {tip('Backlog','Chamados sem solução')} — Tempo em Aberto"), unsafe_allow_html=True)
+                    st.markdown(co(f"⏳ {tip('Backlog','Chamados sem solução')} — Tempo em Aberto", "Calcula e foca exclusivamente na parte da fila que continua SEM DATA de SOLUÇÃO. Conta a quantidade de dias passados desde a primeira abertura."), unsafe_allow_html=True)
                     cores_ag = [GREEN,TEAL,GOLD,ORANGE,DANGER,"#8E1010"]
                     fig4 = px.bar(df_ag, x="Faixa", y="Qtd", text="Qtd",
                                    color="Faixa", color_discrete_sequence=cores_ag)
@@ -1022,7 +1028,7 @@ def aba_situacao(df, df_raw):
 
             with cb:
                 try:
-                    st.markdown(co("✅ Resolvidos vs 📌 Em Aberto — por Atendente"), unsafe_allow_html=True)
+                    st.markdown(co("✅ Resolvidos vs 📌 Em Aberto — por Atendente", "Gera uma proporção real entre quantos problemas o usuário soluciona para a empresa comparado a quantos ficam retidos como peso ou refugo em sua própria fila."), unsafe_allow_html=True)
                     dra = df.copy()
                     dra["Status"] = dra["Data_Solucao"].apply(
                         lambda x: "Resolvido" if pd.notna(x) else "Em Aberto")
@@ -1048,12 +1054,11 @@ def aba_situacao(df, df_raw):
     # ================= NOVO: SEÇÃO DE FEEDBACKS =================
     st.markdown('<span class="sec-t">⭐ Feedbacks Acumulados por Atendente (Ignora Filtros)</span>', unsafe_allow_html=True)
     try:
-        # Busca exclusiva no campo Situação do banco completo (df_raw)
         mask_fb = df_raw["Situacao"].astype(str).str.contains("feedback", case=False, na=False)
         df_fb = df_raw[mask_fb]
         
         if not df_fb.empty:
-            st.markdown(co("🏆 Total Histórico de Feedbacks (Base Completa)"), unsafe_allow_html=True)
+            st.markdown(co("🏆 Total Histórico de Feedbacks (Base Completa)", "Contagem total isolada e vitalícia por cada analista que alcançou situação de elogio, sugestão ou retorno formal via categoria Feedback."), unsafe_allow_html=True)
             df_fb_ag = df_fb.groupby("Atendente").size().reset_index(name="Qtd").sort_values("Qtd", ascending=True)
             
             fig_fb = px.bar(df_fb_ag, x="Qtd", y="Atendente", orientation="h", text="Qtd",
@@ -1076,13 +1081,11 @@ def aba_situacao(df, df_raw):
 # ══════════════════════════════════════════════════════════════════════════════
 def aba_sla(df):
     st.markdown(f"""<div class="chart-card" style="margin-bottom:12px">
-  <div class="chart-title">ℹ️ Glossário dos Indicadores</div>
+  <div class="chart-title">ℹ️ Glossário dos Indicadores Principais</div>
   <div style="font-size:0.78rem;color:{MUTED};line-height:1.8">
-    <b style="color:{WHITE}">• {tip('FCR','First Contact Resolution')}</b>: % de chamados resolvidos no primeiro contato. Meta: ≥ 70%<br>
-    <b style="color:{WHITE}">• {tip('TMR','Tempo Médio de Resolução')}</b>: média entre abertura e solução. Quanto menor, melhor.<br>
-    <b style="color:{WHITE}">• {tip('SLA','Service Level Agreement — Acordo de Nível de Serviço')}</b>: compromisso de prazo de atendimento.<br>
-    <b style="color:{WHITE}">• Taxa de Encerramento</b>: % de chamados resolvidos no período filtrado.<br>
-    <b style="color:{WHITE}">• Sazonalidade</b>: variação do volume por módulo ao longo dos meses.
+    <b style="color:{WHITE}">• {tip('FCR','First Contact Resolution: Exige que a central encerre o chamado sem que haja quebra de expectativa no dia.')}</b>: % de chamados resolvidos no primeiro contato. Meta: ≥ 70%<br>
+    <b style="color:{WHITE}">• {tip('TMR','Tempo Médio de Resolução: Divisão crua do tempo em horas/dias consumidos na tratativa.')}</b>: média entre abertura e solução. Quanto menor, melhor.<br>
+    <b style="color:{WHITE}">• {tip('SLA','Service Level Agreement: Regra que embasa tempo máximo ou garantia de resposta contratual.')}</b>: compromisso de prazo de atendimento.<br>
   </div>
 </div>""", unsafe_allow_html=True)
 
@@ -1090,7 +1093,7 @@ def aba_sla(df):
 
     with cf:
         try:
-            st.markdown(co(f"⚡ Evolução Mensal — {tip('FCR%','Meta: ≥ 70%')}"), unsafe_allow_html=True)
+            st.markdown(co(f"⚡ Evolução Mensal — {tip('FCR%','Meta: ≥ 70%')}", "Mostra o ganho ou desgaste de assertividade de atendimento na equipe a cada mês/ano, em conjunto com o volume absoluto de ocorrências da mesma janela."), unsafe_allow_html=True)
             dfm = df.copy()
             dfm["MesAno"] = dfm["Data_abertura"].dt.to_period("M").astype(str)
             dfm = dfm.groupby("MesAno").agg(
@@ -1130,7 +1133,7 @@ def aba_sla(df):
 
     with ct:
         try:
-            st.markdown(co(f"⏱️ {tip('TMR','Tempo Médio de Resolução')} por Atendente (dias)"), unsafe_allow_html=True)
+            st.markdown(co(f"⏱️ {tip('TMR','Tempo Médio de Resolução')} por Atendente (dias)", "Medição cirúrgica em dias corridos calculada pelas diferenças cronológicas da hora de abertura da demanda pelo analista até o clique de Solucionado."), unsafe_allow_html=True)
             
             # >= 0 em vez de > 0
             dtmr = df[df["TMR_h"]>=0].groupby("Atendente")["TMR_h"].mean().reset_index()
@@ -1163,7 +1166,7 @@ def aba_sla(df):
             st.warning(f"Gráfico indisponível: {e}")
 
     try:
-        st.markdown(co(f"🌡️ Sazonalidade — Módulo × Mês (identifica picos anuais)"), unsafe_allow_html=True)
+        st.markdown(co(f"🌡️ Sazonalidade — Módulo × Mês (identifica picos anuais)", "Mapa térmico anual com varredura visual. Cruza qual recurso do sistema costuma ferver na central de suporte de acordo com o calendário nacional/tributário do Brasil."), unsafe_allow_html=True)
         meses = {1:"Jan",2:"Fev",3:"Mar",4:"Abr",5:"Mai",6:"Jun",
                  7:"Jul",8:"Ago",9:"Set",10:"Out",11:"Nov",12:"Dez"}
         dsaz = df.copy()
@@ -1190,7 +1193,7 @@ def aba_sla(df):
     ca, cb = st.columns(2)
     with ca:
         try:
-            st.markdown(co("📆 Total de Chamados por Ano"), unsafe_allow_html=True)
+            st.markdown(co("📆 Total de Chamados por Ano", "Consolidação anual e macro em barra do tráfego histórico absoluto de requisições retidas em registro."), unsafe_allow_html=True)
             dya = df.groupby("Ano_abertura").size().reset_index(name="Total")
             dya["Ano"] = dya["Ano_abertura"].astype(str)
             fig4 = px.bar(dya, x="Ano", y="Total", text="Total",
@@ -1211,7 +1214,7 @@ def aba_sla(df):
 
     with cb:
         try:
-            st.markdown(co(f"⚡ {tip('FCR%','Resolução no Primeiro Contato')} por Ano"), unsafe_allow_html=True)
+            st.markdown(co(f"⚡ {tip('FCR%','Resolução no Primeiro Contato')} por Ano", "Qualidade média acumulada de resolução assertiva imediata anual para analisar o amadurecimento e especialização temporal de toda a equipe."), unsafe_allow_html=True)
             dyf = df.groupby("Ano_abertura").agg(
                 Total=("Sac","count"), FCR=("Finalizado_Mesmo_Dia","sum")).reset_index()
             dyf["FCR_pct"] = dyf.apply(lambda r: safe_pct(r["FCR"],r["Total"]),axis=1)
@@ -1341,7 +1344,7 @@ def aba_alertas(df, df_raw):
                 st.markdown(f'<div class="alert-card alert-info"><div class="alert-title">✅ Todos acima da meta!</div></div>', unsafe_allow_html=True)
 
         st.markdown('<span class="sec-t">🔀 Fluxo dos Chamados — Origem → Módulo → Situação</span>', unsafe_allow_html=True)
-        st.markdown(co(""), unsafe_allow_html=True)
+        st.markdown(co("", "Mapeamento estilo gráfico de fluxo ('Sankey'). A espessura do ramal reflete as decisões tomadas desde a origem de criação, migrando para quais as partes sistêmicas solicitadas, escoando até a solução centralizada."), unsafe_allow_html=True)
         try:
             top5o = df["Origem"].value_counts().nlargest(5).index.tolist()
             top5m = df["Modulo"].value_counts().nlargest(5).index.tolist()
@@ -1502,9 +1505,17 @@ def main():
     tot_per = len(df)
     clientes_per = df["Cliente"].nunique()
     
-    # ── Média Diária de Clientes ──
+    # ── Média Diária de Clientes (Ponderada pelo volume de chamados) ──
     if not df.empty:
-        media_cli_dia = df.groupby(df["Data_abertura"].dt.date)["Cliente"].nunique().mean()
+        df_dias = df.groupby(df["Data_abertura"].dt.date).agg(
+            Qtd_Chamados=("Sac", "count"),
+            Qtd_Clientes=("Cliente", "nunique")
+        )
+        soma_chamados = df_dias["Qtd_Chamados"].sum()
+        if soma_chamados > 0:
+            media_cli_dia = (df_dias["Qtd_Clientes"] * df_dias["Qtd_Chamados"]).sum() / soma_chamados
+        else:
+            media_cli_dia = 0
     else:
         media_cli_dia = 0
 
@@ -1514,16 +1525,16 @@ def main():
     f_cls   = "b-green" if fcr_mes>=70 else ("b-gold" if fcr_mes>=50 else "b-red")
 
     st.markdown(f"""<div class="kpi-grid">
-  {kpi("Período Filtrado", f"{tot_per:,}",   "chamados no período",  "📋", TEAL)}
-  {kpi("Clientes Total",   f"{clientes_per:,}","no período",          "🏢", PURPLE)}
-  {kpi("Média Cli./Dia",   f"{media_cli_dia:.0f}", "clientes distintos/dia", "👥", "#74B9FF", tip_text="Média de clientes diferentes atendidos por dia dentro do período.")}
-  {kpi("Mês Atual",        f"{tot_mes:,}",   hoje.strftime('%b/%Y'), "📅", BRAND, d_str, d_cls)}
+  {kpi("Período Filtrado", f"{tot_per:,}",   "chamados no período",  "📋", TEAL, tip_text="Total de chamados abertos dentro do intervalo de datas selecionado nos filtros globais acima.")}
+  {kpi("Clientes Total",   f"{clientes_per:,}","no período",          "🏢", PURPLE, tip_text="Quantidade de clientes distintos que abriram chamados dentro do período selecionado.")}
+  {kpi("Média Cli./Dia",   f"{media_cli_dia:.0f}", "ponderada por volume", "👥", "#74B9FF", tip_text="Média ponderada: dá mais peso aos dias com maior volume de chamados, eliminando a distorção de plantões ou fins de semana.")}
+  {kpi("Mês Atual",        f"{tot_mes:,}",   hoje.strftime('%b/%Y'), "📅", BRAND, d_str, d_cls, tip_text="Total de chamados do dia 1º deste mês até hoje, comparado aos mesmos dias úteis do mês passado (Month-to-Date).")}
   {kpi("FCR do Mês",       f"{fcr_mes:.1f}%","1º contato",           "⚡", GOLD,"Meta: 70%",f_cls,
-       tip_text="Resolução no Primeiro Contato: % de chamados finalizados sem retorno do cliente.")}
+       tip_text="Resolução no Primeiro Contato do mês vigente: Porcentagem de chamados finalizados sem retorno do cliente ou reabertura.")}
   {kpi("TMR Geral",        tmr_fmt(tmr_raw),"tempo médio resolução", "⏱️", ORANGE,"","b-muted",
-       tip_text="Tempo Médio de Resolução: calculado entre data de abertura e data de solução.")}
+       tip_text="Tempo Médio de Resolução da base inteira: calculado tirando a média exata de dias/horas entre data de abertura e data de solução final.")}
   {kpi("Backlog Global",   f"{backlog:,}",  "sem solução",            "🗂️", DANGER if backlog>30 else GREEN,"","b-muted",
-       tip_text="Fila de pendências: chamados abertos sem data de solução (todos os períodos).")}
+       tip_text="Fila de pendências consolidada: todos os chamados abertos no sistema que ainda estão SEM DATA DE SOLUÇÃO (ignora o filtro de data acima).")}
 </div>""", unsafe_allow_html=True)
 
     tabs = st.tabs([
