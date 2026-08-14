@@ -65,7 +65,7 @@ header[data-testid="stHeader"] {{ background:transparent !important; }}
 .kpi-card {{
   background:{CARD}; border:1px solid {BORDER};
   border-radius:10px; padding:8px 12px 6px;
-  position:relative; min-height:74px; /* Sem overflow hidden para o tooltip vazar */
+  position:relative; overflow:visible; min-height:74px; /* overflow:visible permite que o tooltip saia do card */
 }}
 .kpi-glow {{ position:absolute; top:0; left:0; right:0; height:3px; border-radius:10px 10px 0 0; overflow:hidden; }}
 .kpi-icon {{ position:absolute; right:8px; top:8px; font-size:1.3rem; opacity:0.08; }}
@@ -106,20 +106,20 @@ header[data-testid="stHeader"] {{ background:transparent !important; }}
 }}
 
 /* ── Tooltip (Hint Inteligente) ── */
-.tip { position:relative; display:inline-block; cursor:help; font-weight:normal; letter-spacing:normal; }
-.tip::after {
+.tip {{ position:relative; display:inline-block; cursor:help; font-weight:normal; letter-spacing:normal; }}
+.tip::after {{
   content:attr(data-tip);
   position:absolute; bottom:130%; left:50%; transform:translateX(-50%);
-  background:#0D1B2A !important; /* Fundo super escuro e SÓLIDO */
-  color:#FFFFFF !important; /* Texto branco puro */
+  background:#0D1B2A !important;
+  color:#FFFFFF !important;
   border:1px solid #334155;
   padding:10px 14px; border-radius:8px; font-size:0.75rem; font-weight:500;
   white-space:normal; width:260px; opacity:0; pointer-events:none;
   transition:opacity .2s; z-index:999999 !important; line-height:1.5;
-  box-shadow: 0px 12px 30px 4px rgba(0,0,0,0.85) !important; /* Sombra preta pesada para isolar o balão */
+  box-shadow: 0px 12px 30px 4px rgba(0,0,0,0.85) !important;
   text-transform:none;
-}
-.tip:hover::after { opacity:1; }
+}}
+.tip:hover::after {{ opacity:1; }}
 
 /* ── Filtro bar ── */
 .filter-bar-title {{
