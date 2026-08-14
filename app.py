@@ -24,7 +24,7 @@ st.set_page_config(
 )
 
 # Atualiza a página forçando um F5 a cada 30 minutos (1800000 ms)
-components.html('<script>setTimeout(()=>window.parent.location.reload(),180000)</script>', height=0)
+components.html('<script>setTimeout(()=>window.parent.location.reload(),1800000)</script>', height=0)
 
 # ── PALETA ─────────────────────────────────────────────────────────────────────
 BG     = "#0F172A"
@@ -291,10 +291,11 @@ def aba_hoje(df_raw, hoje):
 
     ab_h   = len(df_h)
     sol_h  = len(df_sol_h)
-    backlog = df_raw[df_raw["Data_Solucao"].isna()].shape[0]
-    fcr_h  = safe_pct(df_h["Finalizado_Mesmo_Dia"].sum(), ab_h)
     
-    # >= 0 em vez de > 0
+    # Backlog restrito: Apenas chamados abertos hoje que NÃO foram solucionados
+    backlog_hoje = df_h[df_h["Data_Solucao"].isna()].shape[0]
+    
+    fcr_h  = safe_pct(df_h["Finalizado_Mesmo_Dia"].sum(), ab_h)
     tmr_h_v = df_sol_h[df_sol_h["TMR_h"] >= 0]["TMR_h"].mean()
     
     # Contagem de clientes diferentes atendidos hoje
@@ -310,8 +311,8 @@ def aba_hoje(df_raw, hoje):
            tip_text="Resolução no Primeiro Contato: % dos chamados de hoje finalizados sem retorno.")}
       {kpi("TMR do Dia", tmr_fmt(tmr_h_v),       "tempo médio resolução",    "⏱️", PURPLE,
            tip_text="Tempo Médio de Resolução: calculado entre abertura e solução dos chamados encerrados hoje.")}
-      {kpi("Backlog Total",     f"{backlog:,}",  "ainda sem solução",        "🗂️", ORANGE if backlog>50 else GREEN,
-           tip_text="Fila de pendências: total de chamados abertos sem data de solução, independente do período.")}
+      {kpi("Pendentes Hoje",    f"{backlog_hoje:,}",  "criados e não resolvidos",  "🗂️", ORANGE if backlog_hoje>0 else GREEN,
+           tip_text="Chamados abertos na data de hoje que ainda estão sem solução.")}
       {kpi("Ativos Hoje",       str(df_h["Atendente"].nunique()), "atendentes com chamados", "👥", TEAL)}
       {kpi("Clientes Hoje",     f"{clientes_hj}", "atendidos hoje",         "🏢", PURPLE,
            tip_text="Quantidade de clientes distintos que abriram chamados na data de hoje.")}
@@ -446,6 +447,26 @@ def aba_hoje(df_raw, hoje):
         except Exception as e:
             st.markdown(cc(), unsafe_allow_html=True)
             st.warning(f"Gráfico indisponível: {e}")
+
+    # ===== AUDITORIA DE DADOS =====
+    st.markdown("<br>", unsafe_allow_html=True)
+    with st.expander("🔍 Auditoria e Depuração (Comparar com Excel)", expanded=False):
+        st.markdown("**1. Query SQL Executada no Banco:**")
+        st.code("""
+SELECT
+    Sac, 
+    CONVERT(VARCHAR(10), Data_abertura, 103) + ' ' + CONVERT(VARCHAR(8), Data_abertura, 108) AS Data_abertura,
+    Dia_abertura, Mes_abertura, Ano_abertura,
+    CONVERT(VARCHAR(10), [Data Solucao], 103) + ' ' + CONVERT(VARCHAR(8), [Data Solucao], 108) AS Data_Solucao,
+    [Cliente Codigo] AS Cliente_Codigo, Cliente, Contato,
+    Assunto, Motivo, Motivocodigo, Modulo, Situacao, Atendente, Origem,
+    Finalizado_Mesmo_Dia, Tipo
+FROM sgrp_atendimentos_geral
+WHERE Ano_abertura >= 2020;
+        """, language="sql")
+        
+        st.markdown("**2. Dados Brutos (Somente chamados ABERTOS hoje):**")
+        st.dataframe(df_h.reset_index(drop=True), width="stretch")
 
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -1480,6 +1501,12 @@ def main():
     
     tot_per = len(df)
     clientes_per = df["Cliente"].nunique()
+    
+    # ── Média Diária de Clientes ──
+    if not df.empty:
+        media_cli_dia = df.groupby(df["Data_abertura"].dt.date)["Cliente"].nunique().mean()
+    else:
+        media_cli_dia = 0
 
     delta_m = tot_mes - tot_ant
     d_cls   = "b-red" if delta_m>0 else "b-green"
@@ -1488,13 +1515,14 @@ def main():
 
     st.markdown(f"""<div class="kpi-grid">
   {kpi("Período Filtrado", f"{tot_per:,}",   "chamados no período",  "📋", TEAL)}
-  {kpi("Clientes",         f"{clientes_per:,}","no período",          "🏢", PURPLE)}
+  {kpi("Clientes Total",   f"{clientes_per:,}","no período",          "🏢", PURPLE)}
+  {kpi("Média Cli./Dia",   f"{media_cli_dia:.0f}", "clientes distintos/dia", "👥", "#74B9FF", tip_text="Média de clientes diferentes atendidos por dia dentro do período.")}
   {kpi("Mês Atual",        f"{tot_mes:,}",   hoje.strftime('%b/%Y'), "📅", BRAND, d_str, d_cls)}
   {kpi("FCR do Mês",       f"{fcr_mes:.1f}%","1º contato",           "⚡", GOLD,"Meta: 70%",f_cls,
        tip_text="Resolução no Primeiro Contato: % de chamados finalizados sem retorno do cliente.")}
   {kpi("TMR Geral",        tmr_fmt(tmr_raw),"tempo médio resolução", "⏱️", ORANGE,"","b-muted",
        tip_text="Tempo Médio de Resolução: calculado entre data de abertura e data de solução.")}
-  {kpi("Backlog",          f"{backlog:,}",  "sem solução",            "🗂️", DANGER if backlog>30 else GREEN,"","b-muted",
+  {kpi("Backlog Global",   f"{backlog:,}",  "sem solução",            "🗂️", DANGER if backlog>30 else GREEN,"","b-muted",
        tip_text="Fila de pendências: chamados abertos sem data de solução (todos os períodos).")}
 </div>""", unsafe_allow_html=True)
 
