@@ -51,6 +51,12 @@ st.markdown(f"""
 .block-container {{ padding:0.4rem 1.2rem 1rem !important; max-width:100% !important; }}
 header[data-testid="stHeader"] {{ background:transparent !important; }}
 
+/* Libera o overflow globalmente para os tooltips vazarem por toda a tela */
+div[data-testid="stVerticalBlock"], 
+div[data-testid="stHorizontalBlock"], 
+div.element-container, 
+div.stMarkdown {{ overflow: visible !important; }}
+
 /* ── KPI grid (Compacto) ── */
 .kpi-grid {{
   display:grid;
@@ -65,7 +71,7 @@ header[data-testid="stHeader"] {{ background:transparent !important; }}
 .kpi-card {{
   background:{CARD}; border:1px solid {BORDER};
   border-radius:10px; padding:8px 12px 6px;
-  position:relative; overflow:visible; min-height:74px; /* overflow:visible permite que o tooltip saia do card */
+  position:relative; min-height:74px; overflow:visible !important;
 }}
 .kpi-glow {{ position:absolute; top:0; left:0; right:0; height:3px; border-radius:10px 10px 0 0; overflow:hidden; }}
 .kpi-icon {{ position:absolute; right:8px; top:8px; font-size:1.3rem; opacity:0.08; }}
@@ -90,11 +96,13 @@ header[data-testid="stHeader"] {{ background:transparent !important; }}
 .chart-card {{
   background:{CARD}; border:1px solid {BORDER};
   border-radius:10px; padding:10px 12px 6px; margin-bottom:8px;
+  overflow:visible !important;
 }}
 .chart-title {{
   font-size:0.65rem; font-weight:700; text-transform:uppercase;
   letter-spacing:0.5px; color:{MUTED} !important;
   border-bottom:1px solid {BORDER}; padding-bottom:4px; margin-bottom:6px;
+  position:relative; z-index:90000;
 }}
 
 /* ── Section title ── */
@@ -105,21 +113,22 @@ header[data-testid="stHeader"] {{ background:transparent !important; }}
   margin:10px 0 6px; display:block;
 }}
 
-/* ── Tooltip (Hint Inteligente) ── */
-.tip {{ position:relative; display:inline-block; cursor:help; font-weight:normal; letter-spacing:normal; }}
+/* ── Tooltip (Hint Inteligente - Flutuante Absoluto) ── */
+.tip {{ position:relative; display:inline-block; cursor:help; font-weight:bold; letter-spacing:normal; z-index:999999; }}
 .tip::after {{
   content:attr(data-tip);
-  position:absolute; bottom:130%; left:50%; transform:translateX(-50%);
-  background:#0D1B2A !important;
+  position:absolute; top:120%; left:50%; transform:translateX(-50%);
+  background:#090F1D !important; /* Mais escuro que o fundo da página */
   color:#FFFFFF !important;
-  border:1px solid #334155;
-  padding:10px 14px; border-radius:8px; font-size:0.75rem; font-weight:500;
-  white-space:normal; width:260px; opacity:0; pointer-events:none;
-  transition:opacity .2s; z-index:999999 !important; line-height:1.5;
-  box-shadow: 0px 12px 30px 4px rgba(0,0,0,0.85) !important;
+  border:1px solid #475569;
+  padding:12px 16px; border-radius:8px; font-size:0.75rem; font-weight:500;
+  white-space:normal; width:max-content; max-width:300px; opacity:0; pointer-events:none;
+  transition:all .2s; z-index:9999999 !important; line-height:1.5;
+  box-shadow: 0px 15px 35px 5px rgba(0,0,0,0.9) !important;
   text-transform:none;
+  visibility: hidden;
 }}
-.tip:hover::after {{ opacity:1; }}
+.tip:hover::after {{ opacity:1; visibility: visible; }}
 
 /* ── Filtro bar ── */
 .filter-bar-title {{
@@ -199,7 +208,7 @@ def pb(h=300, **kw):
 def co(title="", tooltip=""):
     if tooltip:
         safe_tip = tooltip.replace('"', '&quot;')
-        icon = f' <span class="tip" data-tip="{safe_tip}" style="font-size:.7rem;opacity:.6;margin-left:4px">ⓘ</span>'
+        icon = f' <span class="tip" data-tip="{safe_tip}" style="font-size:.75rem;opacity:.8;margin-left:6px;color:{TEAL}">ⓘ</span>'
         t = f'<div class="chart-title">{title}{icon}</div>'
     else:
         t = f'<div class="chart-title">{title}</div>' if title else ""
@@ -210,11 +219,11 @@ def cc():
 
 def tip(term, desc):
     safe = desc.replace('"', '&quot;')
-    return f'<span class="tip" data-tip="{safe}" style="border-bottom:1px dashed {MUTED}">{term}</span>'
+    return f'<span class="tip" data-tip="{safe}" style="border-bottom:1px dashed {TEAL};color:{WHITE}">{term}</span>'
 
 def kpi(label, val, sub="", icon="📊", color=TEAL, badge="", bcls="b-muted", tip_text=""):
     safe_tip = tip_text.replace('"', '&quot;')
-    ti = f' <span class="tip" data-tip="{safe_tip}" style="font-size:.7rem;opacity:.6">ⓘ</span>' if tip_text else ""
+    ti = f' <span class="tip" data-tip="{safe_tip}" style="font-size:.75rem;opacity:.8;color:{TEAL}">ⓘ</span>' if tip_text else ""
     ba = f'<span class="kpi-badge {bcls}">{badge}</span>' if badge else ""
     return f"""<div class="kpi-card">
   <div class="kpi-glow" style="background:{color}"></div>
