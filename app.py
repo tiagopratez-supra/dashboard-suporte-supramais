@@ -106,17 +106,20 @@ header[data-testid="stHeader"] {{ background:transparent !important; }}
 }}
 
 /* ── Tooltip (Hint Inteligente) ── */
-.tip {{ position:relative; display:inline-block; cursor:help; font-weight:normal; letter-spacing:normal; }}
-.tip::after {{
+.tip { position:relative; display:inline-block; cursor:help; font-weight:normal; letter-spacing:normal; }
+.tip::after {
   content:attr(data-tip);
   position:absolute; bottom:130%; left:50%; transform:translateX(-50%);
-  background:{CARD2}; color:{WHITE}; border:1px solid {BORDER};
-  padding:8px 12px; border-radius:8px; font-size:0.7rem; font-weight:500;
+  background:#0D1B2A !important; /* Fundo super escuro e SÓLIDO */
+  color:#FFFFFF !important; /* Texto branco puro */
+  border:1px solid #334155;
+  padding:10px 14px; border-radius:8px; font-size:0.75rem; font-weight:500;
   white-space:normal; width:260px; opacity:0; pointer-events:none;
-  transition:opacity .2s; z-index:99999; line-height:1.4;
-  box-shadow: 0 10px 25px rgba(0,0,0,0.5); text-transform:none;
-}}
-.tip:hover::after {{ opacity:1; }}
+  transition:opacity .2s; z-index:999999 !important; line-height:1.5;
+  box-shadow: 0px 12px 30px 4px rgba(0,0,0,0.85) !important; /* Sombra preta pesada para isolar o balão */
+  text-transform:none;
+}
+.tip:hover::after { opacity:1; }
 
 /* ── Filtro bar ── */
 .filter-bar-title {{
