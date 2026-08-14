@@ -24,7 +24,7 @@ st.set_page_config(
 )
 
 # Atualiza a página forçando um F5 a cada 30 minutos (1800000 ms)
-components.html('<script>setTimeout(()=>window.parent.location.reload(),1800000)</script>', height=0)
+components.html('<script>setTimeout(()=>window.parent.location.reload(),180000)</script>', height=0)
 
 # ── PALETA ─────────────────────────────────────────────────────────────────────
 BG     = "#0F172A"
