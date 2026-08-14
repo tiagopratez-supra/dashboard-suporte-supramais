@@ -1,10 +1,10 @@
 # =============================================================================
 # Central de Suporte — SupraMAIS  |  Command Center
-# Stack: Streamlit + pymssql + pandas + plotly + streamlit-autorefresh
+# Stack: Streamlit + pymssql + pandas + plotly
 # =============================================================================
 
 import streamlit as st
-from streamlit_autorefresh import st_autorefresh
+import streamlit.components.v1 as components
 import pandas as pd
 import pymssql
 import plotly.express as px
@@ -23,8 +23,8 @@ st.set_page_config(
     initial_sidebar_state="collapsed",
 )
 
-# Atualiza a página silenciosamente a cada 30 minutos (1800000 ms)
-st_autorefresh(interval=1800000, key="data_refresh")
+# Atualiza a página forçando um F5 a cada 30 minutos (1800000 ms)
+components.html('<script>setTimeout(()=>window.parent.location.reload(),1800000)</script>', height=0)
 
 # ── PALETA ─────────────────────────────────────────────────────────────────────
 BG     = "#0F172A"
@@ -241,8 +241,8 @@ def tmr_fmt(h):
     return f"{h/24:.1f} dias"
 
 
-# ── QUERY & CACHE (SQL ATUALIZADO) ────────────────────────────────────────────
-# TTL ajustado para 1790 (29 min e 50s) para limpar o cache 10s antes do autorefresh (1800s)
+# ── QUERY & CACHE ──────────────────────────────────────────────────────────────
+# TTL ajustado para 1790 (29 min e 50s) para limpar o cache 10s antes do F5 (1800s)
 @st.cache_data(ttl=1790, show_spinner="Carregando dados…")
 def carregar_dados() -> pd.DataFrame:
     cfg = st.secrets["database"]
@@ -446,26 +446,6 @@ def aba_hoje(df_raw, hoje):
         except Exception as e:
             st.markdown(cc(), unsafe_allow_html=True)
             st.warning(f"Gráfico indisponível: {e}")
-
-    # ===== AUDITORIA DE DADOS =====
-    st.markdown("<br>", unsafe_allow_html=True)
-    with st.expander("🔍 Auditoria e Depuração (Comparar com Excel)", expanded=False):
-        st.markdown("**1. Query SQL Executada no Banco:**")
-        st.code("""
-SELECT
-    Sac, 
-    CONVERT(VARCHAR(10), Data_abertura, 103) + ' ' + CONVERT(VARCHAR(8), Data_abertura, 108) AS Data_abertura,
-    Dia_abertura, Mes_abertura, Ano_abertura,
-    CONVERT(VARCHAR(10), [Data Solucao], 103) + ' ' + CONVERT(VARCHAR(8), [Data Solucao], 108) AS Data_Solucao,
-    [Cliente Codigo] AS Cliente_Codigo, Cliente, Contato,
-    Assunto, Motivo, Motivocodigo, Modulo, Situacao, Atendente, Origem,
-    Finalizado_Mesmo_Dia, Tipo
-FROM sgrp_atendimentos_geral
-WHERE Ano_abertura >= 2020;
-        """, language="sql")
-        
-        st.markdown("**2. Dados Brutos (Somente chamados ABERTOS hoje):**")
-        st.dataframe(df_h.reset_index(drop=True), width="stretch")
 
 
 # ══════════════════════════════════════════════════════════════════════════════
