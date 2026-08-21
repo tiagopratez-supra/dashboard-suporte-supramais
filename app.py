@@ -584,21 +584,31 @@ def aba_resumo(df):
 
     with c1:
         try:
-            st.markdown(co("📊 Volume Diário + Média Móvel 7 Dias", "Barras verticais mostram a contagem crua diária. A linha representa a média móvel dos últimos 7 dias, ajudando a identificar a tendência real e suavizar vales de finais de semana."), unsafe_allow_html=True)
-            dd = df.groupby(df["Data_abertura"].dt.date).size().reset_index(name="Qtd")
-            dd.columns = ["Data","Qtd"]
+            st.markdown(co("📊 Volume Diário: Chamados vs Clientes", "Barras agrupadas mostram o volume total de chamados e a quantidade de clientes distintos (CNPJs) atendidos em cada dia. A linha reflete a média móvel de chamados dos últimos 7 dias."), unsafe_allow_html=True)
+            
+            dd = df.groupby(df["Data_abertura"].dt.date).agg(
+                Chamados=("Sac", "count"),
+                Clientes=("Cliente", "nunique")
+            ).reset_index()
+            
+            dd.rename(columns={"Data_abertura": "Data"}, inplace=True)
             dd = dd.sort_values("Data")
-            dd["MM7"] = dd["Qtd"].rolling(7, min_periods=1).mean().round(1)
+            
+            dd["MM7"] = dd["Chamados"].rolling(7, min_periods=1).mean().round(1)
+            
             fig = go.Figure()
-            fig.add_bar(x=dd["Data"], y=dd["Qtd"], name="Chamados",
-                         marker_color=BRAND, opacity=0.7)
+            fig.add_bar(x=dd["Data"], y=dd["Chamados"], name="Chamados",
+                         marker_color=BRAND, opacity=0.85)
+            fig.add_bar(x=dd["Data"], y=dd["Clientes"], name="Clientes Únicos",
+                         marker_color=PURPLE, opacity=0.85)
             fig.add_scatter(x=dd["Data"], y=dd["MM7"], mode="lines", name="Média 7d",
                              line=dict(color=TEAL, width=2.5))
             fig.update_layout(**pb(250,
+                barmode="group",
                 xaxis=dict(showgrid=False, color=MUTED),
                 yaxis=dict(showgrid=True, gridcolor=BORDER, color=MUTED),
                 legend=dict(orientation="h", y=1.12, x=0, font=dict(color=WHITE)),
-                bargap=0.25))
+                bargap=0.15))
             st.plotly_chart(fig, use_container_width=True)
             st.markdown(cc(), unsafe_allow_html=True)
         except Exception as e:
