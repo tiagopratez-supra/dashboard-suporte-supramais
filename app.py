@@ -14,6 +14,7 @@ from zoneinfo import ZoneInfo
 import os, warnings
 import calendar
 import io
+import unicodedata
 
 warnings.filterwarnings("ignore")
 
@@ -259,9 +260,17 @@ def tmr_fmt(h):
         return f"{h:.1f}h"
     return f"{h/24:.1f} dias"
 
+def remover_acentos(texto):
+    """Limpa acentos para garantir exportações de Excel e CSV sempre perfeitas."""
+    if pd.isna(texto):
+        return texto
+    try:
+        texto = str(texto)
+        return ''.join(c for c in unicodedata.normalize('NFD', texto) if unicodedata.category(c) != 'Mn')
+    except:
+        return texto
 
 # ── QUERY & CACHE ──────────────────────────────────────────────────────────────
-# TTL ajustado para 1790 (29 min e 50s) para limpar o cache 10s antes do F5 (1800s)
 @st.cache_data(ttl=1790, show_spinner="Carregando dados…")
 def carregar_dados() -> pd.DataFrame:
     cfg = st.secrets["database"]
@@ -293,7 +302,6 @@ def carregar_dados() -> pd.DataFrame:
     df = pd.read_sql(SQL_QUERY, conn)
     conn.close()
     
-    # Conversão incluindo as horas
     for col in ["Data_abertura", "Data_Solucao"]:
         df[col] = pd.to_datetime(df[col], format="%d/%m/%Y %H:%M:%S", errors="coerce")
         
@@ -311,16 +319,13 @@ def aba_hoje(df_raw, hoje):
     ab_h   = len(df_h)
     sol_h  = len(df_sol_h)
     
-    # Backlog restrito: Apenas chamados abertos hoje que NÃO foram solucionados hoje
     backlog_hoje = df_h[df_h["Data_Solucao"].isna()].shape[0]
     
     fcr_h  = safe_pct(df_h["Finalizado_Mesmo_Dia"].sum(), ab_h)
     tmr_h_v = df_sol_h[df_sol_h["TMR_h"] >= 0]["TMR_h"].mean()
     
-    # Contagem de clientes diferentes atendidos hoje
     clientes_hj = df_h["Cliente"].nunique()
 
-    # KPIs do dia
     st.markdown(f"""
     <div class="kpi-grid">
       {kpi("Abertos Hoje",      f"{ab_h}",       "novos chamados hoje",      "📥", BRAND, tip_text="Volume total de novos chamados registrados no sistema na data de hoje.")}
@@ -346,12 +351,9 @@ def aba_hoje(df_raw, hoje):
         </div>""", unsafe_allow_html=True)
         return
 
-    # Preparar base unificada de total por atendente
     tot_ag = df_h.groupby("Atendente").size()
 
-    # Linha 1: Gráficos de Atendentes
     r1c1, r1c2 = st.columns(2)
-
     with r1c1:
         try:
             st.markdown(co("📊 Atendimentos Hoje: Atendente × Canal", "Distribuição dos chamados abertos hoje por membro da equipe, detalhado pela origem de entrada (Telefone, WhatsApp, etc)."), unsafe_allow_html=True)
@@ -408,7 +410,6 @@ def aba_hoje(df_raw, hoje):
             st.markdown(cc(), unsafe_allow_html=True)
             st.warning(f"Gráfico indisponível: {e}")
 
-    # Linha 2: Top Clientes, Motivos, Origem e Situação
     r2c1, r2c2, r2c3 = st.columns([1.5, 1.5, 1])
 
     with r2c1:
@@ -968,10 +969,11 @@ def aba_situacao(df, df_raw):
 
     with c1:
         try:
-            st.markdown(co("📁 Tipo de Chamado", "Classificação de natureza dos problemas gerados em sistema (Ex: Erro, Melhoria, Configuração, Intervenção Técnica, Dúvida)."), unsafe_allow_html=True)
-            dt = df.groupby("Tipo").size().reset_index(name="Qtd")
+            st.markdown(co("📁 Motivo do Chamado", "Classificação do agrupamento operacional acionado nos registros de suporte."), unsafe_allow_html=True)
+            # Mostrando o Top 5 para não poluir
+            dt = df.groupby("Motivo").size().reset_index(name="Qtd").nlargest(5, "Qtd")
             if not dt.empty:
-                fig = px.pie(dt, names="Tipo", values="Qtd", hole=0.52,
+                fig = px.pie(dt, names="Motivo", values="Qtd", hole=0.52,
                               color_discrete_sequence=CORES)
                 fig.update_traces(textposition="inside", textinfo="percent+label",
                                    textfont=dict(size=11,color=WHITE))
@@ -1406,7 +1408,7 @@ def aba_alertas(df, df_raw):
 def aba_backlog(df_base):
     # Nota de interface: O backlog não utiliza o filtro de data (mostra a vida inteira)
     st.markdown('<span class="sec-t">🗂️ Visão Geral do Backlog (Pendências Ativas)</span>', unsafe_allow_html=True)
-    st.caption("ℹ️ *Os dados desta aba **ignoram** o filtro de Data Inicial e Final no topo da tela, revelando 100% dos chamados em aberto no sistema até hoje. Os filtros de Atendente, Situação, Origem e Módulo continuam funcionando normalmente.*")
+    st.caption("ℹ️ *Os dados desta aba **ignoram** o filtro de Data Inicial e Final no topo da tela, revelando 100% dos chamados em aberto no sistema até hoje. Os filtros de Atendente, Situação, Origem, Módulo e Motivo continuam funcionando normalmente.*")
     
     # Isolar apenas os chamados que AINDA NÃO POSSUEM data de solução
     df_bl = df_base[df_base["Data_Solucao"].isna()].copy()
@@ -1431,27 +1433,27 @@ def aba_backlog(df_base):
       {kpi("Chamado Mais Antigo", f"{kpi_max} dias", "pior cenário atual", "🚨", DANGER)}
     </div>""", unsafe_allow_html=True)
     
-    # ── TOTALIZADORES POR TIPO DE CHAMADO ──
-    st.markdown('<span class="sec-t">📁 Totalizadores por Tipo de Chamado</span>', unsafe_allow_html=True)
+    # ── TOTALIZADORES POR MOTIVO DE CHAMADO ──
+    st.markdown('<span class="sec-t">📁 Totalizadores por Motivo</span>', unsafe_allow_html=True)
     
-    tipos_counts = df_bl["Tipo"].value_counts()
+    motivos_counts = df_bl["Motivo"].value_counts()
     kpis_tipos_html = ""
     
-    for tipo, qtd in tipos_counts.items():
-        t_low = str(tipo).lower()
-        # Heurística de cores e ícones para cada tipo
-        if 'erro' in t_low or 'incidente' in t_low: 
+    for motivo, qtd in motivos_counts.items():
+        t_low = str(motivo).lower()
+        # Heurística de cores e ícones para cada motivo
+        if 'erro' in t_low or 'incidente' in t_low or 'correção' in t_low or 'correçao' in t_low: 
             icone, cor = '🐞', DANGER
         elif 'dúvida' in t_low or 'duvida' in t_low: 
             icone, cor = '❓', TEAL
         elif 'melhoria' in t_low or 'projeto' in t_low: 
             icone, cor = '✨', GOLD
-        elif 'intervenção' in t_low or 'técnica' in t_low or 'tecnica' in t_low or 'banco' in t_low: 
+        elif 'intervenção' in t_low or 'técnica' in t_low or 'tecnica' in t_low or 'banco' in t_low or 'script' in t_low: 
             icone, cor = '🛠️', ORANGE
         else: 
             icone, cor = '📁', PURPLE
             
-        kpis_tipos_html += kpi(f"{tipo}", f"{qtd}", "em aberto", icone, cor)
+        kpis_tipos_html += kpi(f"{motivo}", f"{qtd}", "em aberto", icone, cor)
         
     st.markdown(f'<div class="kpi-grid">{kpis_tipos_html}</div>', unsafe_allow_html=True)
     
@@ -1477,7 +1479,7 @@ def aba_backlog(df_base):
         st.plotly_chart(fig2, use_container_width=True)
         st.markdown(cc(), unsafe_allow_html=True)
         
-    # ── LINHA 2: Clientes, Origem e Tipo ──
+    # ── LINHA 2: Clientes, Origem e Motivo ──
     c3, c4, c5 = st.columns([2, 1.5, 1.5])
     with c3:
         st.markdown(co("🏢 Backlog por Cliente (Top 15)", "Clientes que possuem o maior número de chamados em aberto na central atualmente."), unsafe_allow_html=True)
@@ -1495,9 +1497,9 @@ def aba_backlog(df_base):
         st.markdown(cc(), unsafe_allow_html=True)
         
     with c5:
-        st.markdown(co("📁 Distribuição por Tipo", "Proporção gráfica dos tipos de chamados retidos (Erros vs Dúvidas)."), unsafe_allow_html=True)
-        d_ti = df_bl.groupby("Tipo").size().reset_index(name="Qtd")
-        fig4 = px.pie(d_ti, names="Tipo", values="Qtd", hole=0.5, color_discrete_sequence=CORES)
+        st.markdown(co("📁 Distribuição por Motivo", "Proporção gráfica dos motivos de chamados retidos (Erros vs Dúvidas)."), unsafe_allow_html=True)
+        d_ti = df_bl.groupby("Motivo").size().reset_index(name="Qtd")
+        fig4 = px.pie(d_ti, names="Motivo", values="Qtd", hole=0.5, color_discrete_sequence=CORES)
         fig4.update_traces(textposition="inside", textinfo="percent+label", textfont=dict(color=WHITE))
         fig4.update_layout(**pb(280, showlegend=False))
         st.plotly_chart(fig4, use_container_width=True)
@@ -1510,20 +1512,24 @@ def aba_backlog(df_base):
     with col_s:
         busca = st.text_input("🔍 Buscar localmente no Backlog:", placeholder="Digite o SAC, Cliente ou Assunto para filtrar os dados da tabela abaixo...", key="busca_bl")
     
-    # Lógica de Exportação Híbrida: Tenta Excel verdadeiro, usa CSV robusto de fallback
+    # Lógica de Exportação 100% blindada contra erros de caracteres no Excel
     with col_e:
         st.markdown("<div style='height:28px'></div>", unsafe_allow_html=True)
         
+        # Limpa os acentos e pontuações do dataframe exportável para o Excel não distorcer nada
+        df_export = df_bl.copy()
+        for col in df_export.select_dtypes(include=['object']).columns:
+            df_export[col] = df_export[col].apply(remover_acentos)
+            
         try:
             buffer = io.BytesIO()
-            df_bl.to_excel(buffer, index=False, engine='openpyxl')
+            df_export.to_excel(buffer, index=False, engine='openpyxl')
             export_data = buffer.getvalue()
             export_name = f"Backlog_SupraMAIS_{date.today().strftime('%d-%m-%Y')}.xlsx"
             export_mime = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
             is_excel = True
         except ImportError:
-            # Caso a biblioteca openpyxl falhe, o CSV é exportado pronto para o Excel BR
-            export_data = df_bl.to_csv(index=False, sep=";", decimal=",", encoding="utf-8-sig")
+            export_data = df_export.to_csv(index=False, sep=";", decimal=",", encoding="latin1", errors="ignore")
             export_name = f"Backlog_SupraMAIS_{date.today().strftime('%d-%m-%Y')}.csv"
             export_mime = "text/csv"
             is_excel = False
@@ -1536,8 +1542,8 @@ def aba_backlog(df_base):
             use_container_width=True
         )
         
-    # Colunas para visualização na tela (Coluna Tipo Adicionada)
-    cols_disp = ["Sac", "Dias_Aberto", "Tipo", "Atendente", "Cliente", "Modulo", "Origem", "Assunto", "Data_abertura"]
+    # Colunas para visualização na tela
+    cols_disp = ["Sac", "Dias_Aberto", "Motivo", "Atendente", "Cliente", "Modulo", "Origem", "Assunto", "Data_abertura"]
     df_show = df_bl.sort_values("Dias_Aberto", ascending=False)[cols_disp]
     
     if busca:
@@ -1588,7 +1594,7 @@ def main():
   FILTROS GLOBAIS — aplicados em todas as abas (Data é ignorada na aba "Hoje" e reconfigurada em "Por Hora")
 </div>""", unsafe_allow_html=True)
 
-        fc1, fc2, fc3, fc4, fc5, fc6, fc7 = st.columns([1.2, 1.2, 1.8, 1.8, 1.8, 1.8, 0.8])
+        fc1, fc2, fc3, fc4, fc5, fc6, fc7, fc8 = st.columns([1.2, 1.2, 1.5, 1.5, 1.3, 1.5, 1.5, 0.8])
 
         data_min = df_raw["Data_abertura"].dropna().min().date()
         data_max = max(df_raw["Data_abertura"].dropna().max().date(), hoje)
@@ -1618,6 +1624,11 @@ def main():
                                      placeholder="Todos os módulos")
                                      
         with fc7:
+            motivos = sorted(df_raw["Motivo"].dropna().astype(str).unique())
+            sel_mot = st.multiselect("Motivo", motivos,
+                                     placeholder="Todos os motivos")
+                                     
+        with fc8:
             st.markdown("<div style='height:22px'></div>", unsafe_allow_html=True)
             if st.button("🔄 Atualizar"):
                 st.cache_data.clear()
@@ -1630,6 +1641,7 @@ def main():
     if sel_sit: df_base_no_date = df_base_no_date[df_base_no_date["Situacao"].isin(sel_sit)]
     if sel_or:  df_base_no_date = df_base_no_date[df_base_no_date["Origem"].isin(sel_or)]
     if sel_mod: df_base_no_date = df_base_no_date[df_base_no_date["Modulo"].isin(sel_mod)]
+    if sel_mot: df_base_no_date = df_base_no_date[df_base_no_date["Motivo"].isin(sel_mot)]
 
     # Aplicação final do filtro de data para as demais abas de relatórios gerais
     df = df_base_no_date.copy()
