@@ -1431,6 +1431,30 @@ def aba_backlog(df_base):
       {kpi("Chamado Mais Antigo", f"{kpi_max} dias", "pior cenário atual", "🚨", DANGER)}
     </div>""", unsafe_allow_html=True)
     
+    # ── TOTALIZADORES POR TIPO DE CHAMADO ──
+    st.markdown('<span class="sec-t">📁 Totalizadores por Tipo de Chamado</span>', unsafe_allow_html=True)
+    
+    tipos_counts = df_bl["Tipo"].value_counts()
+    kpis_tipos_html = ""
+    
+    for tipo, qtd in tipos_counts.items():
+        t_low = str(tipo).lower()
+        # Heurística de cores e ícones para cada tipo
+        if 'erro' in t_low or 'incidente' in t_low: 
+            icone, cor = '🐞', DANGER
+        elif 'dúvida' in t_low or 'duvida' in t_low: 
+            icone, cor = '❓', TEAL
+        elif 'melhoria' in t_low or 'projeto' in t_low: 
+            icone, cor = '✨', GOLD
+        elif 'intervenção' in t_low or 'técnica' in t_low or 'tecnica' in t_low or 'banco' in t_low: 
+            icone, cor = '🛠️', ORANGE
+        else: 
+            icone, cor = '📁', PURPLE
+            
+        kpis_tipos_html += kpi(f"{tipo}", f"{qtd}", "em aberto", icone, cor)
+        
+    st.markdown(f'<div class="kpi-grid">{kpis_tipos_html}</div>', unsafe_allow_html=True)
+    
     # ── LINHA 1: Gráficos de Backlog ──
     c1, c2 = st.columns(2)
     with c1:
@@ -1453,8 +1477,8 @@ def aba_backlog(df_base):
         st.plotly_chart(fig2, use_container_width=True)
         st.markdown(cc(), unsafe_allow_html=True)
         
-    # ── LINHA 2: Clientes e Origem ──
-    c3, c4 = st.columns([3, 2])
+    # ── LINHA 2: Clientes, Origem e Tipo ──
+    c3, c4, c5 = st.columns([2, 1.5, 1.5])
     with c3:
         st.markdown(co("🏢 Backlog por Cliente (Top 15)", "Clientes que possuem o maior número de chamados em aberto na central atualmente."), unsafe_allow_html=True)
         d_cl = df_bl.groupby("Cliente").size().reset_index(name="Total").nlargest(15, "Total").sort_values("Total", ascending=False)
@@ -1468,6 +1492,15 @@ def aba_backlog(df_base):
         fig3.update_traces(textposition="inside", textinfo="percent+label", textfont=dict(color=WHITE))
         fig3.update_layout(**pb(280, showlegend=False))
         st.plotly_chart(fig3, use_container_width=True)
+        st.markdown(cc(), unsafe_allow_html=True)
+        
+    with c5:
+        st.markdown(co("📁 Distribuição por Tipo", "Proporção gráfica dos tipos de chamados retidos (Erros vs Dúvidas)."), unsafe_allow_html=True)
+        d_ti = df_bl.groupby("Tipo").size().reset_index(name="Qtd")
+        fig4 = px.pie(d_ti, names="Tipo", values="Qtd", hole=0.5, color_discrete_sequence=CORES)
+        fig4.update_traces(textposition="inside", textinfo="percent+label", textfont=dict(color=WHITE))
+        fig4.update_layout(**pb(280, showlegend=False))
+        st.plotly_chart(fig4, use_container_width=True)
         st.markdown(cc(), unsafe_allow_html=True)
         
     # ── TABELA & EXPORTAÇÃO ──
@@ -1503,8 +1536,8 @@ def aba_backlog(df_base):
             use_container_width=True
         )
         
-    # Colunas para visualização na tela
-    cols_disp = ["Sac", "Dias_Aberto", "Atendente", "Cliente", "Modulo", "Origem", "Assunto", "Data_abertura"]
+    # Colunas para visualização na tela (Coluna Tipo Adicionada)
+    cols_disp = ["Sac", "Dias_Aberto", "Tipo", "Atendente", "Cliente", "Modulo", "Origem", "Assunto", "Data_abertura"]
     df_show = df_bl.sort_values("Dias_Aberto", ascending=False)[cols_disp]
     
     if busca:
