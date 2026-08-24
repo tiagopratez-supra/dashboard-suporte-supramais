@@ -75,6 +75,17 @@ div.stMarkdown {{ overflow: visible !important; }}
   border-radius:10px; padding:8px 12px 6px;
   position:relative; min-height:74px; overflow:visible !important;
 }}
+/* Estilo para Cards Clicáveis */
+.clickable-card {{
+  cursor: pointer;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}}
+.clickable-card:hover {{
+  transform: translateY(-3px);
+  box-shadow: 0 6px 16px rgba(0,0,0,0.4);
+  border-color: {TEAL};
+}}
+
 .kpi-glow {{ position:absolute; top:0; left:0; right:0; height:3px; border-radius:10px 10px 0 0; overflow:hidden; }}
 .kpi-icon {{ position:absolute; right:8px; top:8px; font-size:1.3rem; opacity:0.08; }}
 .kpi-label {{
@@ -223,11 +234,16 @@ def tip(term, desc):
     safe = desc.replace('"', '&quot;')
     return f'<span class="tip" data-tip="{safe}" style="border-bottom:1px dashed {TEAL};color:{WHITE}">{term}</span>'
 
-def kpi(label, val, sub="", icon="📊", color=TEAL, badge="", bcls="b-muted", tip_text=""):
+def kpi(label, val, sub="", icon="📊", color=TEAL, badge="", bcls="b-muted", tip_text="", card_id=""):
     safe_tip = tip_text.replace('"', '&quot;')
     ti = f' <span class="tip" data-tip="{safe_tip}" style="font-size:.75rem;opacity:.8;color:{TEAL}">ⓘ</span>' if tip_text else ""
     ba = f'<span class="kpi-badge {bcls}">{badge}</span>' if badge else ""
-    return f"""<div class="kpi-card">
+    
+    # Se receber um ID, injeta a classe clicável
+    cid = f' id="{card_id}"' if card_id else ""
+    c_class = "kpi-card clickable-card" if card_id else "kpi-card"
+    
+    return f"""<div class="{c_class}"{cid}>
   <div class="kpi-glow" style="background:{color}"></div>
   <span class="kpi-icon">{icon}</span>
   <div class="kpi-label">{label}{ti}</div>
@@ -1718,7 +1734,7 @@ def main():
   {kpi("TMR Geral",        tmr_fmt(tmr_raw),"tempo médio resolução", "⏱️", ORANGE,"","b-muted",
        tip_text="Tempo Médio de Resolução da base inteira: calculado tirando a média exata de dias/horas entre data de abertura e data de solução final.")}
   {kpi("Backlog Global",   f"{backlog:,}",  "sem solução",            "🗂️", DANGER if backlog>30 else GREEN,"","b-muted",
-       tip_text="Fila de pendências consolidada: todos os chamados abertos no sistema que ainda estão SEM DATA DE SOLUÇÃO (ignora o filtro de data acima).")}
+       tip_text="Fila de pendências consolidada: todos os chamados abertos no sistema que ainda estão SEM DATA DE SOLUÇÃO (ignora o filtro de data acima).", card_id="card-backlog")}
 </div>""", unsafe_allow_html=True)
 
     tabs = st.tabs([
@@ -1742,6 +1758,24 @@ def main():
     with tabs[6]: aba_sla(df)
     with tabs[7]: aba_alertas(df, df_raw)
     with tabs[8]: aba_backlog(df_base_no_date)
+
+    # Motor JavaScript invisível que torna o card clicável e navega para a aba (Índice 8)
+    components.html("""
+    <script>
+    const initClick = setInterval(() => {
+        const card = window.parent.document.getElementById('card-backlog');
+        const tabs = window.parent.document.querySelectorAll('button[data-baseweb="tab"]');
+        
+        if (card && tabs.length > 8) {
+            card.onclick = function() {
+                tabs[8].click();
+                tabs[8].scrollIntoView({behavior: 'smooth', block: 'start'});
+            };
+            clearInterval(initClick);
+        }
+    }, 250);
+    </script>
+    """, height=0)
 
 
 if __name__ == "__main__":
