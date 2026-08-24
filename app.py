@@ -531,12 +531,13 @@ def aba_por_hora(df_base, hoje):
     with c1:
         try:
             st.markdown(co(f"📊 Fluxo de Chamados por Hora × Atendente", "Gráfico empilhado mostrando a divisão da carga horária. Permite ver quem assumiu mais ligações nas horas de pico."), unsafe_allow_html=True)
-            dh_at = df_dia.groupby(["Hora", "Atendente"]).size().reset_index(name="Qtd")
+            dh_at = df_dia.groupby(["Hora", "Atendente"]).size().reset_index(name="Qtd").sort_values("Hora")
             fig1 = px.bar(dh_at, x="Hora", y="Qtd", color="Atendente", text="Qtd",
                           color_discrete_sequence=CORES)
             fig1.update_traces(textposition="inside", textfont=dict(size=10, color=WHITE))
             fig1.update_layout(**pb(320, xaxis_title="", yaxis_title="Volume de Chamados",
                                 legend=dict(orientation="v", title="", font=dict(color=WHITE, size=9))))
+            fig1.update_xaxes(categoryorder='category ascending')
             st.plotly_chart(fig1, use_container_width=True)
             st.markdown(cc(), unsafe_allow_html=True)
         except Exception as e:
@@ -548,12 +549,13 @@ def aba_por_hora(df_base, hoje):
             top5m = df_dia["Modulo"].value_counts().nlargest(5).index
             df_hm = df_dia.copy()
             df_hm["Mod_x"] = df_hm["Modulo"].apply(lambda x: x if x in top5m else "Outros")
-            dh_mod = df_hm.groupby(["Hora", "Mod_x"]).size().reset_index(name="Qtd")
+            dh_mod = df_hm.groupby(["Hora", "Mod_x"]).size().reset_index(name="Qtd").sort_values("Hora")
             fig2 = px.bar(dh_mod, x="Hora", y="Qtd", color="Mod_x", text="Qtd",
                           color_discrete_sequence=CORES)
             fig2.update_traces(textposition="inside", textfont=dict(size=10, color=WHITE))
             fig2.update_layout(**pb(320, xaxis_title="", yaxis_title="Volume de Chamados",
                                 legend=dict(orientation="v", title="", font=dict(color=WHITE, size=9))))
+            fig2.update_xaxes(categoryorder='category ascending')
             st.plotly_chart(fig2, use_container_width=True)
             st.markdown(cc(), unsafe_allow_html=True)
         except Exception as e:
