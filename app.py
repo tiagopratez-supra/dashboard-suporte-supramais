@@ -1759,24 +1759,37 @@ def main():
     with tabs[7]: aba_alertas(df, df_raw)
     with tabs[8]: aba_backlog(df_base_no_date)
 
-    # Motor JavaScript invisível que torna o card clicável e navega para a aba (Índice 8)
+  # Motor JavaScript invisível que torna o card clicável e navega para a aba
     components.html("""
     <script>
     const initClick = setInterval(() => {
         const card = window.parent.document.getElementById('card-backlog');
-        const tabs = window.parent.document.querySelectorAll('button[data-baseweb="tab"]');
+        // Busca todos os botões que funcionam como aba no Streamlit
+        const tabs = window.parent.document.querySelectorAll('button[role="tab"], div[data-baseweb="tab"]');
         
-        if (card && tabs.length > 8) {
-            card.onclick = function() {
-                tabs[8].click();
-                tabs[8].scrollIntoView({behavior: 'smooth', block: 'start'});
-            };
-            clearInterval(initClick);
+        if (card && tabs.length > 0) {
+            let targetTab = null;
+            
+            // Vasculha as abas até achar a que contém a palavra "Backlog"
+            for (let i = 0; i < tabs.length; i++) {
+                if (tabs[i].innerText.includes('Backlog')) {
+                    targetTab = tabs[i];
+                    break;
+                }
+            }
+            
+            if (targetTab) {
+                // Quando clicar no card, clica na aba e rola a tela para ela
+                card.onclick = function() {
+                    targetTab.click();
+                    targetTab.scrollIntoView({behavior: 'smooth', block: 'start'});
+                };
+                clearInterval(initClick); // Encerra a busca ao conectar com sucesso
+            }
         }
     }, 250);
     </script>
     """, height=0)
-
 
 if __name__ == "__main__":
     main()
