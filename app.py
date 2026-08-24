@@ -13,6 +13,7 @@ from datetime import date, datetime, timedelta
 from zoneinfo import ZoneInfo
 import os, warnings
 import calendar
+import io
 
 warnings.filterwarnings("ignore")
 
@@ -1400,6 +1401,120 @@ def aba_alertas(df, df_raw):
 
 
 # ══════════════════════════════════════════════════════════════════════════════
+#  NOVA ABA 8 — BACKLOG (VISÃO GERAL ATIVA)
+# ══════════════════════════════════════════════════════════════════════════════
+def aba_backlog(df_base):
+    # Nota de interface: O backlog não utiliza o filtro de data (mostra a vida inteira)
+    st.markdown('<span class="sec-t">🗂️ Visão Geral do Backlog (Pendências Ativas)</span>', unsafe_allow_html=True)
+    st.caption("ℹ️ *Os dados desta aba **ignoram** o filtro de Data Inicial e Final no topo da tela, revelando 100% dos chamados em aberto no sistema até hoje. Os filtros de Atendente, Situação, Origem e Módulo continuam funcionando normalmente.*")
+    
+    # Isolar apenas os chamados que AINDA NÃO POSSUEM data de solução
+    df_bl = df_base[df_base["Data_Solucao"].isna()].copy()
+    
+    if df_bl.empty:
+        st.success("✅ Nenhum chamado em aberto com os filtros atuais. Fila zerada!")
+        return
+        
+    # Calcular idade de cada chamado em dias
+    hoje = pd.Timestamp(date.today())
+    df_bl["Dias_Aberto"] = (hoje - df_bl["Data_abertura"]).dt.days.clip(lower=0)
+    
+    kpi_tot = len(df_bl)
+    kpi_cli = df_bl["Cliente"].nunique()
+    kpi_med = df_bl["Dias_Aberto"].mean()
+    kpi_max = df_bl["Dias_Aberto"].max()
+    
+    st.markdown(f"""<div class="kpi-grid">
+      {kpi("Total Backlog", f"{kpi_tot:,}", "pendências ativas", "🗂️", DANGER if kpi_tot>50 else GREEN)}
+      {kpi("Clientes Afetados", f"{kpi_cli:,}", "aguardando retorno", "🏢", PURPLE)}
+      {kpi("Média de Espera", f"{kpi_med:.1f} dias", "idade média da fila", "⏳", ORANGE)}
+      {kpi("Chamado Mais Antigo", f"{kpi_max} dias", "pior cenário atual", "🚨", DANGER)}
+    </div>""", unsafe_allow_html=True)
+    
+    # ── LINHA 1: Gráficos de Backlog ──
+    c1, c2 = st.columns(2)
+    with c1:
+        st.markdown(co("👤 Backlog por Atendente", "Total de chamados em aberto atualmente assumidos por cada membro da equipe."), unsafe_allow_html=True)
+        d_at = df_bl.groupby("Atendente").size().reset_index(name="Qtd").sort_values("Qtd")
+        fig1 = px.bar(d_at, y="Atendente", x="Qtd", orientation="h", text="Qtd", color="Qtd", color_continuous_scale=[[0,CARD2],[1,TEAL]])
+        fig1.update_coloraxes(showscale=False)
+        fig1.update_traces(textposition="outside", textfont=dict(color=WHITE))
+        fig1.update_layout(**pb(300, xaxis=dict(showgrid=False), yaxis=dict(showgrid=False), yaxis_title="", xaxis_title=""))
+        st.plotly_chart(fig1, use_container_width=True)
+        st.markdown(cc(), unsafe_allow_html=True)
+        
+    with c2:
+        st.markdown(co("🧩 Backlog por Módulo (Top 10)", "Áreas do sistema com maior acúmulo de pendências ativas aguardando tratamento."), unsafe_allow_html=True)
+        d_mo = df_bl.groupby("Modulo").size().reset_index(name="Qtd").nlargest(10, "Qtd").sort_values("Qtd")
+        fig2 = px.bar(d_mo, y="Modulo", x="Qtd", orientation="h", text="Qtd", color="Qtd", color_continuous_scale=[[0,CARD2],[1,BRAND]])
+        fig2.update_coloraxes(showscale=False)
+        fig2.update_traces(textposition="outside", textfont=dict(color=WHITE))
+        fig2.update_layout(**pb(300, xaxis=dict(showgrid=False), yaxis=dict(showgrid=False), yaxis_title="", xaxis_title=""))
+        st.plotly_chart(fig2, use_container_width=True)
+        st.markdown(cc(), unsafe_allow_html=True)
+        
+    # ── LINHA 2: Clientes e Origem ──
+    c3, c4 = st.columns([3, 2])
+    with c3:
+        st.markdown(co("🏢 Backlog por Cliente (Top 15)", "Clientes que possuem o maior número de chamados em aberto na central atualmente."), unsafe_allow_html=True)
+        d_cl = df_bl.groupby("Cliente").size().reset_index(name="Total").nlargest(15, "Total").sort_values("Total", ascending=False)
+        st.markdown(rank_html(d_cl, "Cliente", "Total", ORANGE), unsafe_allow_html=True)
+        st.markdown(cc(), unsafe_allow_html=True)
+        
+    with c4:
+        st.markdown(co("📡 Origem do Backlog", "Qual foi o canal de entrada dos problemas que estão hoje represados na fila."), unsafe_allow_html=True)
+        d_or = df_bl.groupby("Origem").size().reset_index(name="Qtd")
+        fig3 = px.pie(d_or, names="Origem", values="Qtd", hole=0.5, color_discrete_sequence=CORES)
+        fig3.update_traces(textposition="inside", textinfo="percent+label", textfont=dict(color=WHITE))
+        fig3.update_layout(**pb(280, showlegend=False))
+        st.plotly_chart(fig3, use_container_width=True)
+        st.markdown(cc(), unsafe_allow_html=True)
+        
+    # ── TABELA & EXPORTAÇÃO ──
+    st.markdown('<span class="sec-t">📋 Tabela Completa do Backlog & Exportação</span>', unsafe_allow_html=True)
+    
+    col_s, col_e = st.columns([8, 2])
+    with col_s:
+        busca = st.text_input("🔍 Buscar localmente no Backlog:", placeholder="Digite o SAC, Cliente ou Assunto para filtrar os dados da tabela abaixo...", key="busca_bl")
+    
+    # Lógica de Exportação Híbrida: Tenta Excel verdadeiro, usa CSV robusto de fallback
+    with col_e:
+        st.markdown("<div style='height:28px'></div>", unsafe_allow_html=True)
+        
+        try:
+            buffer = io.BytesIO()
+            df_bl.to_excel(buffer, index=False, engine='openpyxl')
+            export_data = buffer.getvalue()
+            export_name = f"Backlog_SupraMAIS_{date.today().strftime('%d-%m-%Y')}.xlsx"
+            export_mime = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+            is_excel = True
+        except ImportError:
+            # Caso a biblioteca openpyxl falhe, o CSV é exportado pronto para o Excel BR
+            export_data = df_bl.to_csv(index=False, sep=";", decimal=",", encoding="utf-8-sig")
+            export_name = f"Backlog_SupraMAIS_{date.today().strftime('%d-%m-%Y')}.csv"
+            export_mime = "text/csv"
+            is_excel = False
+            
+        st.download_button(
+            label=f"📥 Exportar para Excel {'' if is_excel else '(CSV)'}", 
+            data=export_data, 
+            file_name=export_name, 
+            mime=export_mime, 
+            use_container_width=True
+        )
+        
+    # Colunas para visualização na tela
+    cols_disp = ["Sac", "Dias_Aberto", "Atendente", "Cliente", "Modulo", "Origem", "Assunto", "Data_abertura"]
+    df_show = df_bl.sort_values("Dias_Aberto", ascending=False)[cols_disp]
+    
+    if busca:
+        mask = df_show.astype(str).apply(lambda x: x.str.contains(busca, case=False)).any(axis=1)
+        df_show = df_show[mask]
+        
+    st.dataframe(df_show, use_container_width=True, height=400)
+
+
+# ══════════════════════════════════════════════════════════════════════════════
 #  MAIN
 # ══════════════════════════════════════════════════════════════════════════════
 def main():
@@ -1568,6 +1683,7 @@ def main():
         "🎫 Situação",
         "📈 SLA & KPIs",
         "🚨 Alertas & Gestão",
+        "🗂️ Backlog",
     ])
 
     with tabs[0]: aba_hoje(df_raw, hoje)
@@ -1578,6 +1694,7 @@ def main():
     with tabs[5]: aba_situacao(df, df_raw)
     with tabs[6]: aba_sla(df)
     with tabs[7]: aba_alertas(df, df_raw)
+    with tabs[8]: aba_backlog(df_base_no_date)
 
 
 if __name__ == "__main__":
