@@ -758,9 +758,20 @@ def aba_clientes(df):
             st.warning(f"Gráfico indisponível: {e}")
 
     with c4:
-        st.markdown(co("🗣️ Top 15 Contatos", "Identifica as pessoas físicas (CPF/Nomes) mais problemáticas ou que mais necessitam de apoio do seu time, somando a requisição independente da empresa que pertencem."), unsafe_allow_html=True)
-        dc2 = df.groupby("Contato").size().reset_index(name="Total").sort_values("Total",ascending=False).head(15)
-        st.markdown(rank_html(dc2,"Contato","Total",GOLD), unsafe_allow_html=True)
+        st.markdown(co("🗣️ Top 15 Contatos (Usuário + Cliente)", "Identifica as pessoas físicas mais acionam o suporte, vinculadas à empresa que pertencem. Facilita o mapeamento de usuários focais ou que exigem mais treinamento."), unsafe_allow_html=True)
+        
+        # Cria uma coluna virtual combinando Contato e Cliente
+        df["Usuario_Cliente"] = df.apply(
+            lambda x: f"{str(x['Contato']).title()} ({str(x['Cliente']).title()[:15]}...)" if pd.notna(x["Contato"]) else "—", 
+            axis=1
+        )
+        
+        dc2 = df.groupby("Usuario_Cliente").size().reset_index(name="Total").sort_values("Total", ascending=False).head(15)
+        
+        # Limpa eventuais vazios que podem aparecer no topo
+        dc2 = dc2[~dc2["Usuario_Cliente"].str.startswith("—")] 
+        
+        st.markdown(rank_html(dc2, "Usuario_Cliente", "Total", GOLD), unsafe_allow_html=True)
         st.markdown(cc(), unsafe_allow_html=True)
 
     st.markdown('<span class="sec-t">🔍 Raio-X do Cliente</span>', unsafe_allow_html=True)
@@ -786,7 +797,7 @@ def aba_clientes(df):
         </div>""", unsafe_allow_html=True)
 
         r1, r2, r3 = st.columns(3)
-        for col, campo, tit, cor in [(r1,"Contato","Top Contatos",TEAL),
+        for col, campo, tit, cor in [(r1,"Contato","Usuários Solicitantes",TEAL),
                                       (r2,"Modulo","Módulos",BRAND),
                                       (r3,"Origem","Origem",ORANGE)]:
             with col:
