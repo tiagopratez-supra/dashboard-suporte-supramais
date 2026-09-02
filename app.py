@@ -286,6 +286,17 @@ def remover_acentos(texto):
     except:
         return texto
 
+def formatar_nome_curto(nome_completo):
+    """Extrai apenas o Primeiro Nome e Sobrenome para evitar homônimos."""
+    if not nome_completo or pd.isna(nome_completo):
+        return "—"
+    partes = str(nome_completo).split()
+    if len(partes) > 1:
+        return f"{partes[0]} {partes[1]}".title()
+    elif partes:
+        return partes[0].title()
+    return "—"
+
 # ── QUERY & CACHE ──────────────────────────────────────────────────────────────
 @st.cache_data(ttl=1790, show_spinner="Carregando dados…")
 def carregar_dados() -> pd.DataFrame:
@@ -375,8 +386,8 @@ def aba_hoje(df_raw, hoje):
             st.markdown(co("📊 Atendimentos Hoje: Atendente × Canal", "Distribuição dos chamados abertos hoje por membro da equipe, detalhado pela origem de entrada (Telefone, WhatsApp, etc)."), unsafe_allow_html=True)
             df_at_or = df_h.groupby(["Atendente", "Origem"]).size().reset_index(name="Qtd")
             
-            df_at_or["Atendente_Lbl"] = df_at_or["Atendente"].apply(lambda x: f"{x} [{tot_ag[x]}]")
-            ordem_lbl = [f"{x} [{tot_ag[x]}]" for x in tot_ag.sort_values().index.tolist()]
+            df_at_or["Atendente_Lbl"] = df_at_or["Atendente"].apply(lambda x: f"{formatar_nome_curto(x)} [{tot_ag[x]}]")
+            ordem_lbl = [f"{formatar_nome_curto(x)} [{tot_ag[x]}]" for x in tot_ag.sort_values().index.tolist()]
             
             fig = px.bar(df_at_or, y="Atendente_Lbl", x="Qtd", color="Origem", orientation="h", text="Qtd",
                          category_orders={"Atendente_Lbl": ordem_lbl},
@@ -398,25 +409,24 @@ def aba_hoje(df_raw, hoje):
 
     with r1c2:
         try:
-            st.markdown(co("🧩 Mapa de Calor Hoje: Atendente × Módulo", "Top 5 módulos mais acionados hoje mapeados contra os atendentes. Cores mais claras indicam maior concentração de chamados na mesma pessoa/módulo."), unsafe_allow_html=True)
-            top_mod_h = df_h["Modulo"].value_counts().nlargest(5).index
-            df_hm = df_h.copy()
-            df_hm["Mod_x"] = df_hm["Modulo"].apply(lambda x: x if x in top_mod_h else "Outros")
+            st.markdown(co("🎯 Matriz de Esforço: Atendente × Módulo", "Cruza todos os módulos acionados no dia com os membros da equipe. Bolhas maiores e mais brilhantes indicam forte concentração de chamados daquele assunto na mesma pessoa."), unsafe_allow_html=True)
             
-            df_hm["Atendente_Lbl"] = df_hm["Atendente"].apply(lambda x: f"{x} [{tot_ag[x]}]")
+            df_bolhas = df_h.groupby(["Atendente", "Modulo"]).size().reset_index(name="Qtd")
             
-            piv_h = df_hm.groupby(["Atendente_Lbl", "Mod_x"]).size().reset_index(name="Qtd")\
-                      .pivot(index="Atendente_Lbl", columns="Mod_x", values="Qtd").fillna(0)
+            df_bolhas["Atendente_Lbl"] = df_bolhas["Atendente"].apply(lambda x: formatar_nome_curto(x))
+            df_bolhas["Mod_Curto"] = df_bolhas["Modulo"].apply(lambda x: str(x).split('-')[-1].strip() if '-' in str(x) else str(x))
             
-            piv_h = piv_h.reindex(ordem_lbl).fillna(0)
+            fig_mod = px.scatter(df_bolhas, x="Mod_Curto", y="Atendente_Lbl", size="Qtd", color="Qtd",
+                                 color_continuous_scale=[[0, CARD2], [0.5, TEAL], [1, PURPLE]],
+                                 text="Qtd", size_max=22)
             
-            fig_mod = px.imshow(piv_h, text_auto=True, aspect="auto",
-                                color_continuous_scale=[[0,CARD2],[0.5,CARD],[1,PURPLE]])
             fig_mod.update_coloraxes(showscale=False)
-            fig_mod.update_traces(textfont=dict(color=WHITE))
-            fig_mod.update_layout(**pb(max(240, len(ordem_lbl)*35),
+            fig_mod.update_traces(textposition='middle center', textfont=dict(color=WHITE, size=11))
+            
+            fig_mod.update_layout(**pb(max(240, df_h['Atendente'].nunique()*35),
                 xaxis_title="", yaxis_title="",
-                xaxis=dict(side="top") 
+                xaxis=dict(showgrid=True, gridcolor=BORDER, dtick=1),
+                yaxis=dict(showgrid=True, gridcolor=BORDER, dtick=1) 
             ))
             fig_mod.update_layout(margin=dict(t=25, b=6, l=6, r=6))
             
@@ -904,7 +914,7 @@ def aba_atendentes(df):
             fig_q.add_hline(y=med_f,line_color=BORDER,line_dash="dot",line_width=1.5)
             fig_q.add_scatter(
                 x=df_at["Total"], y=df_at["FCR_pct"],
-                mode="markers+text", text=df_at["Atendente"],
+                mode="markers+text", text=df_at["Atendente"].apply(formatar_nome_curto),
                 textposition="top center",
                 textfont=dict(size=10,color=WHITE),
                 marker=dict(size=df_at["Total"]**0.55*2.5, color=TEAL,
@@ -935,8 +945,9 @@ def aba_atendentes(df):
             top6m = df["Modulo"].value_counts().nlargest(6).index
             dhm = df.copy()
             dhm["Mod_x"] = dhm["Modulo"].apply(lambda x: x if x in top6m else "Outros")
-            piv = dhm.groupby(["Atendente","Mod_x"]).size().reset_index(name="Qtd")\
-                      .pivot(index="Atendente",columns="Mod_x",values="Qtd").fillna(0)
+            dhm["Atend_Curto"] = dhm["Atendente"].apply(formatar_nome_curto)
+            piv = dhm.groupby(["Atend_Curto","Mod_x"]).size().reset_index(name="Qtd")\
+                      .pivot(index="Atend_Curto",columns="Mod_x",values="Qtd").fillna(0)
             fig_hm = px.imshow(piv, text_auto=True, aspect="auto",
                                 color_continuous_scale=[[0,CARD2],[0.5,CARD],[1,BRAND]])
             fig_hm.update_coloraxes(showscale=False)
@@ -958,7 +969,7 @@ def aba_atendentes(df):
                 try:
                     val = float(row["FCR_pct"]) if pd.notna(row["FCR_pct"]) else 0.0
                     cor = GREEN if val>=70 else (GOLD if val>=50 else DANGER)
-                    nome = str(row["Atendente"]).split()[0] if pd.notna(row["Atendente"]) else "—"
+                    nome = formatar_nome_curto(row["Atendente"])
                     fig_g = go.Figure(go.Indicator(
                         mode="gauge+number",
                         value=val,
@@ -1088,7 +1099,11 @@ def aba_situacao(df, df_raw):
                         lambda x: "Resolvido" if pd.notna(x) else "Em Aberto")
                     drag = dra.groupby(["Atendente","Status"]).size().reset_index(name="Qtd")
                     n_at = df["Atendente"].nunique()
-                    fig5 = px.bar(drag, y="Atendente", x="Qtd", color="Status",
+                    
+                    # Usa o nome formatado para economizar espaço horizontal
+                    drag["Atend_Curto"] = drag["Atendente"].apply(formatar_nome_curto)
+                    
+                    fig5 = px.bar(drag, y="Atend_Curto", x="Qtd", color="Status",
                                    orientation="h", barmode="stack", text="Qtd",
                                    color_discrete_map={"Resolvido":GREEN,"Em Aberto":DANGER})
                     fig5.update_traces(textposition="inside",
@@ -1114,8 +1129,9 @@ def aba_situacao(df, df_raw):
         if not df_fb.empty:
             st.markdown(co("🏆 Total Histórico de Feedbacks (Base Completa)", "Contagem total isolada e vitalícia por cada analista que alcançou situação de elogio, sugestão ou retorno formal via categoria Feedback."), unsafe_allow_html=True)
             df_fb_ag = df_fb.groupby("Atendente").size().reset_index(name="Qtd").sort_values("Qtd", ascending=True)
+            df_fb_ag["Atend_Curto"] = df_fb_ag["Atendente"].apply(formatar_nome_curto)
             
-            fig_fb = px.bar(df_fb_ag, x="Qtd", y="Atendente", orientation="h", text="Qtd",
+            fig_fb = px.bar(df_fb_ag, x="Qtd", y="Atend_Curto", orientation="h", text="Qtd",
                            color="Qtd", color_continuous_scale=[[0, CARD2], [1, GOLD]])
             fig_fb.update_coloraxes(showscale=False)
             fig_fb.update_traces(textposition="outside", cliponaxis=False, textfont=dict(color=WHITE))
@@ -1194,6 +1210,7 @@ def aba_sla(df):
             
             dtmr.columns = ["Atendente","TMR_h"]
             dtmr["TMR_dias"] = (dtmr["TMR_h"]/24).round(2)
+            dtmr["Atend_Curto"] = dtmr["Atendente"].apply(formatar_nome_curto)
             dtmr = dtmr.sort_values("TMR_dias")
             dtmr["cor"] = dtmr["TMR_dias"].apply(
                 lambda x: GREEN if x<=2 else (GOLD if x<=5 else DANGER))
@@ -1201,7 +1218,7 @@ def aba_sla(df):
                 fig2 = go.Figure()
                 for _, r in dtmr.iterrows():
                     fig2.add_bar(
-                        x=[float(r["TMR_dias"])], y=[r["Atendente"]],
+                        x=[float(r["TMR_dias"])], y=[r["Atend_Curto"]],
                         orientation="h",
                         marker_color=r["cor"],
                         text=[f"{r['TMR_dias']:.1f}d"],
@@ -1349,7 +1366,7 @@ def aba_alertas(df, df_raw):
                 for _, r in criticos.head(10).iterrows():
                     dias = int(r["Dias"])
                     cliente = str(r.get("Cliente","—"))
-                    atend   = str(r.get("Atendente","—"))
+                    atend   = formatar_nome_curto(r.get("Atendente","—"))
                     assunto = str(r.get("Assunto","—"))[:60]
                     modulo  = str(r.get("Modulo","—"))
                     sac     = str(r.get("Sac","—"))
@@ -1365,11 +1382,12 @@ def aba_alertas(df, df_raw):
             st.markdown('<span class="sec-t">🟠 Chamados Urgentes — 7 a 29 Dias</span>', unsafe_allow_html=True)
             for _, r in urgentes.head(8).iterrows():
                 dias = int(r["Dias"])
+                atend = formatar_nome_curto(r.get("Atendente","—"))
                 st.markdown(f"""<div class="alert-card alert-warn">
   <div class="alert-title">🟠 #{r.get('Sac','—')} — {r.get('Cliente','—')}
     <span style="float:right;color:{GOLD};font-weight:700;font-size:.75rem">{dias} dias</span>
   </div>
-  <div class="alert-sub">👤 {r.get('Atendente','—')} &nbsp;·&nbsp; 🧩 {r.get('Modulo','—')} &nbsp;·&nbsp; 📋 {str(r.get('Assunto','—'))[:55]}</div>
+  <div class="alert-sub">👤 {atend} &nbsp;·&nbsp; 🧩 {r.get('Modulo','—')} &nbsp;·&nbsp; 📋 {str(r.get('Assunto','—'))[:55]}</div>
 </div>""", unsafe_allow_html=True)
 
         with cb:
@@ -1389,7 +1407,7 @@ def aba_alertas(df, df_raw):
                 for _, r in dfa.iterrows():
                     c2 = DANGER if r["FCR_pct"]<50 else ORANGE
                     st.markdown(f"""<div class="alert-card alert-warn">
-  <div class="alert-title">👤 {r['Atendente']}
+  <div class="alert-title">👤 {formatar_nome_curto(r['Atendente'])}
     <span style="float:right;color:{c2};font-weight:700">{r['FCR_pct']:.0f}%</span>
   </div>
   <div class="alert-sub">{r['Total']:,} chamados &nbsp;·&nbsp; Meta: 70%</div>
@@ -1491,7 +1509,8 @@ def aba_backlog(df_base):
     with c1:
         st.markdown(co("👤 Backlog por Atendente", "Total de chamados em aberto atualmente assumidos por cada membro da equipe."), unsafe_allow_html=True)
         d_at = df_bl.groupby("Atendente").size().reset_index(name="Qtd").sort_values("Qtd")
-        fig1 = px.bar(d_at, y="Atendente", x="Qtd", orientation="h", text="Qtd", color="Qtd", color_continuous_scale=[[0,CARD2],[1,TEAL]])
+        d_at["Atendente_Curto"] = d_at["Atendente"].apply(formatar_nome_curto)
+        fig1 = px.bar(d_at, y="Atendente_Curto", x="Qtd", orientation="h", text="Qtd", color="Qtd", color_continuous_scale=[[0,CARD2],[1,TEAL]])
         fig1.update_coloraxes(showscale=False)
         fig1.update_traces(textposition="outside", textfont=dict(color=WHITE))
         fig1.update_layout(**pb(300, xaxis=dict(showgrid=False), yaxis=dict(showgrid=False), yaxis_title="", xaxis_title=""))
@@ -1770,7 +1789,7 @@ def main():
     with tabs[7]: aba_alertas(df, df_raw)
     with tabs[8]: aba_backlog(df_base_no_date)
 
-  # Motor JavaScript invisível que torna o card clicável e navega para a aba
+    # Motor JavaScript invisível que torna o card clicável e navega para a aba
     components.html("""
     <script>
     const initClick = setInterval(() => {
@@ -1801,6 +1820,7 @@ def main():
     }, 250);
     </script>
     """, height=0)
+
 
 if __name__ == "__main__":
     main()
