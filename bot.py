@@ -8,7 +8,7 @@ import time
 from telebot.types import InlineKeyboardMarkup, InlineKeyboardButton
 
 # 1. Configurações de Credenciais
-CHAVE_TELEGRAM = "8922477706:AAFpgSxQyz8YR_S3ZAaX0_tMlrebq9SWspk"
+CHAVE_TELEGRAM = st.secrets["telegram"]["token"]
 
 bot = telebot.TeleBot(CHAVE_TELEGRAM)
 
@@ -52,6 +52,18 @@ def monitorar_inatividade():
 
 thread_timeout = threading.Thread(target=monitorar_inatividade, daemon=True)
 thread_timeout.start()
+
+# ----------------- FUNÇÕES DE APOIO -----------------
+def formatar_nome_curto(nome_completo):
+    """Extrai apenas o Primeiro Nome e Sobrenome para evitar homônimos."""
+    if not nome_completo or pd.isna(nome_completo):
+        return "Não informado"
+    partes = str(nome_completo).split()
+    if len(partes) > 1:
+        return f"{partes[0]} {partes[1]}".title()
+    elif partes:
+        return partes[0].title()
+    return "Não informado"
 
 # ----------------- FUNÇÕES DE BANCO DE DADOS -----------------
 def get_db_connection():
@@ -222,9 +234,12 @@ def monitorar_erros_diarios():
             if novos_erros:
                 for erro in novos_erros:
                     cliente = str(erro.get('Cliente', 'Não informado')).title()
-                    atendente = str(erro.get('Atendente', 'Não atribuído')).title()
+                    
+                    # Nome e Sobrenome para evitar homônimos
+                    atendente = formatar_nome_curto(erro.get('Atendente'))
+                    
                     motivo = erro.get('Motivo', 'Não especificado')
-                    assunto = erro.get('Assunto', 'Não informado')
+                    assunto = erro.get('Assunto', 'Não informado') # Sem limites no Telegram
                     situacao = erro.get('Situacao', 'Em aberto')
                     data_br = erro.get('Data_abertura_br', 'Sem data')
                     
@@ -239,7 +254,6 @@ def monitorar_erros_diarios():
                         f"📅 *Data:* {data_br}"
                     )
                     
-                    # Notifica SOMENTE o ID que você definiu para os erros
                     try:
                         bot.send_message(ID_NOTIFICACAO_ERRO, mensagem_alerta, parse_mode="Markdown")
                     except Exception as e:
@@ -247,10 +261,8 @@ def monitorar_erros_diarios():
                     
                     chamados_notificados_hoje.add(erro['Sac'])
             
-            # Aguarda 2 horas
             time.sleep(7200)
         else:
-            # Fora do horário, aguarda 15 minutos para tentar de novo
             time.sleep(900)
 
 thread_erros = threading.Thread(target=monitorar_erros_diarios, daemon=True)
@@ -342,9 +354,9 @@ def processar_consulta_chamado(mensagem):
     resp += f"🗣 **Solicitante:** {str(dados.get('Contato')).title() if dados.get('Contato') else 'Não informado'}\n"
     resp += f"💬 **Assunto:** {dados.get('Assunto')}\n"
     resp += f"📌 **Situação:** {dados.get('Situacao')} | ⚡ **Status:** {dados.get('Status')}\n"
-    resp += f"👤 **Atendente:** {str(dados.get('Atendente')).title()}\n"
+    resp += f"👤 **Atendente:** {formatar_nome_curto(dados.get('Atendente'))}\n"
     resp += f"🌐 **Origem:** {dados.get('Origem')}\n"
-    resp += f"ref: **Resp. Atual:** {str(dados.get('Responsavel_atual')).title() if dados.get('Responsavel_atual') else 'Nenhum'}\n\n"
+    resp += f"ref: **Resp. Atual:** {formatar_nome_curto(dados.get('Responsavel_atual'))}\n\n"
     resp += f"📝 **Última Atualização:** {dados.get('Ultima Atualizacao') or 'Nenhum registro'}\n"
     resp += f"📅 **Data Última Atualização:** {dados.get('Data Ultima Atualizacao') or 'Não informada'}\n"
     
@@ -421,13 +433,13 @@ def enviar_chamados_cliente(chat_id, codigo_cliente):
         resp += "🟢 *EM ABERTO*\n"
         for c in abertos:
             contato = str(c['Contato']).title() if c['Contato'] else "Não informado"
-            resp += f"📌 SAC: `{c['Sac']}` | 📅 {c['Data_abertura_br']}\n🗣 Solicitante: {contato}\n💬 {c['Assunto']}\n👤 {str(c['Atendente']).title()} | 📍 {c['Situacao']}\n\n"
+            resp += f"📌 SAC: `{c['Sac']}` | 📅 {c['Data_abertura_br']}\n🗣 Solicitante: {contato}\n💬 {c['Assunto']}\n👤 {formatar_nome_curto(c['Atendente'])} | 📍 {c['Situacao']}\n\n"
             
     if fechados:
         resp += "🔴 *FECHADOS (Recentes)*\n"
         for c in fechados:
             contato = str(c['Contato']).title() if c['Contato'] else "Não informado"
-            resp += f"📌 SAC: `{c['Sac']}` | 📅 {c['Data_abertura_br']}\n🗣 Solicitante: {contato}\n💬 {c['Assunto']}\n👤 {str(c['Atendente']).title()} | 📍 {c['Situacao']}\n\n"
+            resp += f"📌 SAC: `{c['Sac']}` | 📅 {c['Data_abertura_br']}\n🗣 Solicitante: {contato}\n💬 {c['Assunto']}\n👤 {formatar_nome_curto(c['Atendente'])} | 📍 {c['Situacao']}\n\n"
             
     if len(resp) > 4000:
         bot.send_message(chat_id, resp[:4000] + "...\n(Limitado pelo tamanho)", reply_markup=markup, parse_mode="Markdown")
@@ -505,7 +517,10 @@ def callback_query(call):
         total_atendimentos = len(df)
         resumo_atendentes = df.groupby('Atendente').size().reset_index(name='Quantidade').sort_values(by='Quantidade', ascending=False)
         texto_resposta = f"📊 *Resumo da Operação*\n📅 Data: {data_hoje}\n\n📈 *TOTAL DE CHAMADOS HOJE: {total_atendimentos}*\n\n👥 *Volume por Atendente:*\n"
-        for _, row in resumo_atendentes.iterrows(): texto_resposta += f"👤 {str(row['Atendente']).title()}: {row['Quantidade']} chamado(s)\n"
+        
+        for _, row in resumo_atendentes.iterrows(): 
+            texto_resposta += f"👤 {formatar_nome_curto(row['Atendente'])}: {row['Quantidade']} chamado(s)\n"
+            
         bot.send_message(chat_id, texto_resposta, reply_markup=markup_voltar, parse_mode="Markdown")
 
     elif call.data == "btn_clientes":
