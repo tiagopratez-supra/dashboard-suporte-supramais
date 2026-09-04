@@ -409,24 +409,27 @@ def aba_hoje(df_raw, hoje):
 
     with r1c2:
         try:
-            st.markdown(co("🎯 Matriz de Esforço: Atendente × Módulo", "Cruza todos os módulos acionados no dia com os membros da equipe. Bolhas maiores e mais brilhantes indicam forte concentração de chamados daquele assunto na mesma pessoa."), unsafe_allow_html=True)
+            st.markdown(co("🧩 Módulos por Atendente Hoje", "Gráfico de barras empilhadas detalhando exatamente quais módulos cada membro da equipe atendeu hoje."), unsafe_allow_html=True)
             
-            df_bolhas = df_h.groupby(["Atendente", "Modulo"]).size().reset_index(name="Qtd")
+            df_mod_at = df_h.groupby(["Atendente", "Modulo"]).size().reset_index(name="Qtd")
             
-            df_bolhas["Atendente_Lbl"] = df_bolhas["Atendente"].apply(lambda x: formatar_nome_curto(x))
-            df_bolhas["Mod_Curto"] = df_bolhas["Modulo"].apply(lambda x: str(x).split('-')[-1].strip() if '-' in str(x) else str(x))
+            # Aplica a exata mesma formatação do gráfico da esquerda para manter uniformidade
+            df_mod_at["Atendente_Lbl"] = df_mod_at["Atendente"].apply(lambda x: f"{formatar_nome_curto(x)} [{tot_ag[x]}]")
+            df_mod_at["Mod_Curto"] = df_mod_at["Modulo"].apply(lambda x: str(x).split('-')[-1].strip() if '-' in str(x) else str(x))
             
-            fig_mod = px.scatter(df_bolhas, x="Mod_Curto", y="Atendente_Lbl", size="Qtd", color="Qtd",
-                                 color_continuous_scale=[[0, CARD2], [0.5, TEAL], [1, PURPLE]],
-                                 text="Qtd", size_max=22)
+            # Cria o gráfico de barras (x = Atendente, y = Quantidade)
+            fig_mod = px.bar(df_mod_at, x="Atendente_Lbl", y="Qtd", color="Mod_Curto", text="Qtd",
+                             category_orders={"Atendente_Lbl": ordem_lbl}, # Mantém a mesma ordem do gráfico vizinho
+                             color_discrete_sequence=CORES, barmode="stack")
             
-            fig_mod.update_coloraxes(showscale=False)
-            fig_mod.update_traces(textposition='middle center', textfont=dict(color=WHITE, size=11))
+            # Formatação
+            fig_mod.update_traces(textposition="inside", textfont=dict(size=11, color=WHITE), insidetextanchor="middle")
             
-            fig_mod.update_layout(**pb(max(240, df_h['Atendente'].nunique()*35),
-                xaxis_title="", yaxis_title="",
-                xaxis=dict(showgrid=True, gridcolor=BORDER, dtick=1),
-                yaxis=dict(showgrid=True, gridcolor=BORDER, dtick=1) 
+            # Oculta os eixos para o design continuar limpo e da mesma altura do vizinho
+            fig_mod.update_layout(**pb(max(240, len(ordem_lbl)*35),
+                xaxis=dict(showgrid=False), yaxis=dict(showgrid=False),
+                yaxis_title="", xaxis_title="",
+                legend=dict(orientation="v", title="", font=dict(color=WHITE, size=10))
             ))
             fig_mod.update_layout(margin=dict(t=25, b=6, l=6, r=6))
             
